@@ -202,6 +202,306 @@ const CURATED = [
   ['Prepared', 'Chili with beans, canned', /^Chili with beans, canned$/],
   
   ['Prepared', 'Tuna salad', /^Fish, tuna salad$/],
+
+  /* ================================================================ *
+   * EXPANSION
+   *
+   * Everything above was the first pass at "the foods people obviously eat".
+   * This block widens each group so that a real day's eating can actually be
+   * recorded without falling back to online search — more fish and prepared
+   * dishes especially, which were the thinnest groups.
+   * ================================================================ */
+
+  // ---- More fruit ----
+  ['Fruit', 'Apricot', /^Apricots, raw/],
+  ['Fruit', 'Apricots, dried', /^Apricots, dried, sulfured, uncooked/],
+  ['Fruit', 'Blackberries', /^Blackberries, raw/],
+  ['Fruit', 'Grapefruit', /^Grapefruit, raw, pink and red and white, all areas/],
+  ['Fruit', 'Honeydew melon', /^Melons, honeydew, raw/],
+  ['Fruit', 'Nectarine', /^Nectarines, raw/],
+  ['Fruit', 'Tangerine', /^Tangerines, \(mandarin oranges\), raw/],
+  ['Fruit', 'Pomegranate', /^Pomegranates, raw/],
+  ['Fruit', 'Papaya', /^Papayas, raw/],
+  ['Fruit', 'Figs, dried', /^Figs, dried, uncooked/],
+  ['Fruit', 'Cranberries, raw', /^Cranberries, raw/],
+  ['Fruit', 'Coconut, raw', /^Nuts, coconut meat, raw/],
+  ['Fruit', 'Peaches, canned in juice', /^Peaches, canned, juice pack, solids and liquids/],
+  ['Fruit', 'Pears, canned in juice', /^Pears, canned, juice pack, solids and liquids/],
+  ['Fruit', 'Pineapple, canned in juice', /^Pineapple, canned, juice pack, solids and liquids/],
+  ['Fruit', 'Mandarin oranges, canned', /^Tangerines, \(mandarin oranges\), canned, juice pack/],
+  ['Fruit', 'Apples, dried', /^Apples, dried, sulfured, uncooked/],
+  ['Fruit', 'Rhubarb, raw', /^Rhubarb, raw/],
+  ['Fruit', 'Persimmon', /^Persimmons, japanese, raw/],
+  ['Fruit', 'Guava', /^Guavas, common, raw/],
+
+  // ---- More vegetables ----
+  ['Vegetable', 'Asparagus, cooked', /^Asparagus, cooked, boiled, drained$/],
+  ['Vegetable', 'Beets, cooked', /^Beets, cooked, boiled, drained$/],
+  ['Vegetable', 'Brussels sprouts, cooked', /^Brussels sprouts, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Kale, cooked', /^Kale, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Collard greens, cooked', /^Collards, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Turnip greens, cooked', /^Turnip greens, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Mustard greens, cooked', /^Mustard greens, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Bell pepper, red', /^Peppers, sweet, red, raw/],
+  ['Vegetable', 'Radishes, raw', /^Radishes, raw/],
+  ['Vegetable', 'Butternut squash, cooked', /^Squash, winter, butternut, cooked, baked, without salt/],
+  ['Vegetable', 'Acorn squash, cooked', /^Squash, winter, acorn, cooked, baked, without salt/],
+  ['Vegetable', 'Eggplant, cooked', /^Eggplant, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Okra, cooked', /^Okra, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Artichoke, cooked', /^Artichokes, \(globe or french\), cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Asparagus, canned', /^Asparagus, canned, drained solids/],
+  ['Vegetable', 'Dill pickle', /^Pickles, cucumber, dill or kosher dill/],
+  ['Vegetable', 'Sweet pickle relish', /^Pickle relish, sweet/],
+  ['Vegetable', 'Sauerkraut, canned', /^Sauerkraut, canned, solids and liquids/],
+  ['Vegetable', 'Green olives', /^Olives, pickled, canned or bottled, green/],
+  ['Vegetable', 'Black olives', /^Olives, ripe, canned \(small-extra large\)/],
+  ['Vegetable', 'Peas, canned', /^Peas, green, canned, regular pack, solids and liquids/],
+  ['Vegetable', 'Green beans, canned', /^Beans, snap, green, canned, regular pack, drained solids/],
+  ['Vegetable', 'Hash brown potatoes', /^Potatoes, hash brown, home-prepared/],
+  ['Vegetable', 'Potato salad', /^Potato salad, home-prepared/],
+  ['Vegetable', 'Yam, cooked', /^Yam, cooked, boiled, drained, or baked, without salt/],
+  ['Vegetable', 'Lettuce, romaine', /^Lettuce, cos or romaine, raw/],
+  ['Vegetable', 'Spinach, cooked', /^Spinach, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Broccoli, raw', /^Broccoli, raw/],
+  ['Vegetable', 'Carrots, cooked', /^Carrots, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Cauliflower, cooked', /^Cauliflower, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Onions, cooked', /^Onions, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Garlic, raw', /^Garlic, raw/],
+  ['Vegetable', 'Tomatoes, canned', /^Tomatoes, red, ripe, canned, packed in tomato juice/],
+  ['Vegetable', 'Tomato paste', /^Tomato products, canned, paste, without salt added/],
+  ['Vegetable', 'Pumpkin, canned', /^Pumpkin, canned, without salt/],
+  ['Vegetable', 'Parsnips, cooked', /^Parsnips, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Turnips, cooked', /^Turnips, cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Bean sprouts', /^Mung beans, mature seeds, sprouted, raw/],
+  ['Vegetable', 'Bok choy, cooked', /^Cabbage, chinese \(pak-choi\), cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Snow peas', /^Peas, edible-podded, raw/],
+  ['Vegetable', 'Leeks, cooked', /^Leeks, \(bulb and lower leaf-portion\), cooked, boiled, drained, without salt/],
+  ['Vegetable', 'Green onions', /^Onions, spring or scallions \(includes tops and bulb\), raw/],
+  ['Vegetable', 'Sweet potato, canned', /^Sweet potato, canned, syrup pack, drained solids/],
+
+  // ---- More grains ----
+  ['Grains', 'Rye bread', /^Bread, rye$/],
+  ['Grains', 'Pita bread, white', /^Bread, pita, white, enriched/],
+  ['Grains', 'French bread', /^Bread, french or vienna \(includes sourdough\)/],
+  ['Grains', 'Raisin bread', /^Bread, raisin, enriched/],
+  ['Grains', 'Cornbread', /^Bread, cornbread, dry mix, prepared/],
+  ['Grains', 'Biscuit', /^Biscuits, plain or buttermilk, refrigerated dough, lower fat, baked/],
+  ['Grains', 'Croissant', /^Croissants, butter/],
+  ['Grains', 'Blueberry muffin', /^Muffins, blueberry, commercially prepared/],
+  ['Grains', 'Waffle, frozen', /^Waffles, plain, frozen, ready-to-heat$/],
+  ['Grains', 'French toast', /^French toast, prepared from recipe, made with low fat \(2%\) milk/],
+  ['Grains', 'Couscous, cooked', /^Couscous, cooked/],
+  ['Grains', 'Quinoa, cooked', /^Quinoa, cooked/],
+  ['Grains', 'Barley, cooked', /^Barley, pearled, cooked/],
+  ['Grains', 'Egg noodles, cooked', /^Noodles, egg, enriched, cooked/],
+  ['Grains', 'Whole wheat pasta, cooked', /^Pasta, whole-wheat, cooked/],
+  ['Grains', 'Bran flakes cereal', /Bran Flakes$/],
+  ['Grains', 'Dinner roll', /^Rolls, dinner, plain, commercially prepared/],
+  ['Grains', 'Cinnamon raisin bagel', /^Bagels, cinnamon-raisin/],
+  ['Grains', 'Wheat crackers', /^Crackers, wheat, regular$/],
+  ['Grains', 'Cheese crackers', /^Crackers, cheese, regular$/],
+  ['Grains', 'Matzo', /^Crackers, matzo, plain/],
+  ['Grains', 'Cornmeal', /^Cornmeal, degermed, enriched, yellow/],
+  ['Grains', 'All-purpose flour', /^Wheat flour, white, all-purpose, enriched, bleached/],
+
+  // ---- More meat ----
+  ['Meat', 'Chicken drumstick, cooked', /^Chicken, broilers or fryers, drumstick, meat only, cooked, stewed/],
+  ['Meat', 'Chicken wing, roasted', /^Chicken, broilers or fryers, wing, meat and skin, cooked, roasted/],
+  ['Meat', 'Ground turkey, cooked', /^Turkey, Ground, cooked$/],
+  ['Meat', 'Pot roast, braised', /^Beef, chuck, arm pot roast, separable lean only, trimmed to 0" fat, choice, cooked, braised/],
+  ['Meat', 'Roast beef, deli', /^Roast beef, deli style, prepackaged, sliced/],
+  ['Meat', 'Beef brisket, braised', /^Beef, brisket, flat half, separable lean only, trimmed to 0" fat, all grades, cooked, braised/],
+  ['Meat', 'Beef liver, cooked', /^Beef, variety meats and by-products, liver, cooked, pan-fried/],
+  ['Meat', 'Pork ribs, cooked', /^Pork, fresh, loin, country-style ribs, separable lean only, cooked, braised/],
+  ['Meat', 'Salami', /^Salami, cooked, beef$/],
+  ['Meat', 'Pepperoni', /^Pepperoni, beef and pork, sliced/],
+  ['Meat', 'Pastrami', /^Pastrami, beef, 98% fat-free/],
+  ['Meat', 'Corned beef', /^Beef, cured, corned beef, brisket, cooked/],
+  ['Meat', 'Veal, cooked', /^Veal, loin, separable lean only, cooked, braised/],
+  ['Meat', 'Bratwurst', /^Bratwurst, pork, cooked$/],
+  ['Meat', 'Kielbasa', /^Sausage, Polish, pork and beef, smoked/],
+  ['Meat', 'Liverwurst', /^Liverwurst spread/],
+  ['Meat', 'Chicken breast, deli', /^Chicken breast, oven-roasted, fat-free, sliced/],
+  ['Meat', 'Turkey breast, deli', /^Turkey breast, sliced, prepackaged/],
+  ['Meat', 'Hot dog, turkey', /^Frankfurter, turkey/],
+  ['Meat', 'Beef jerky', /^Snacks, beef jerky, chopped and formed/],
+
+  // ---- More fish ----
+  ['Fish', 'Salmon, canned', /^Fish, salmon, pink, canned, drained solids/],
+  ['Fish', 'Sardines, canned in oil', /^Fish, sardine, Atlantic, canned in oil, drained solids with bone/],
+  ['Fish', 'Crab, cooked', /^Crustaceans, crab, blue, cooked, moist heat/],
+  ['Fish', 'Lobster, cooked', /^Crustaceans, lobster, northern, cooked, moist heat/],
+  ['Fish', 'Scallops, cooked', /^Mollusks, scallop, \(bay and sea\), cooked, steamed/],
+  ['Fish', 'Clams, cooked', /^Mollusks, clam, mixed species, cooked, moist heat/],
+  ['Fish', 'Oysters, cooked', /^Mollusks, oyster, eastern, wild, cooked, moist heat/],
+  ['Fish', 'Halibut, cooked', /^Fish, halibut, Atlantic and Pacific, cooked, dry heat/],
+  ['Fish', 'Flounder, cooked', /^Fish, flatfish \(flounder and sole species\), cooked, dry heat/],
+  ['Fish', 'Mackerel, cooked', /^Fish, mackerel, Atlantic, cooked, dry heat/],
+  ['Fish', 'Haddock, cooked', /^Fish, haddock, cooked, dry heat/],
+  ['Fish', 'Pollock, cooked', /^Fish, pollock, Alaska, cooked/],
+  ['Fish', 'Trout, cooked', /^Fish, trout, rainbow, farmed, cooked, dry heat/],
+  ['Fish', 'Swordfish, cooked', /^Fish, swordfish, cooked, dry heat/],
+  ['Fish', 'Tuna, canned in oil', /^Fish, tuna, light, canned in oil, drained solids/],
+  ['Fish', 'Fish sticks, frozen', /^Fish, fish sticks, frozen, prepared/],
+  ['Fish', 'Shrimp, breaded and fried', /^Fast foods, shrimp, breaded and fried/],
+  ['Fish', 'Mussels, cooked', /^Mollusks, mussel, blue, cooked, moist heat/],
+
+  // ---- More dairy ----
+  ['Dairy', '2% milk', /^Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D$/],
+  ['Dairy', '1% milk', /^Milk, lowfat, fluid, 1% milkfat, with added vitamin A and vitamin D$/],
+  ['Dairy', 'Chocolate milk', /^Milk, chocolate, fluid, commercial, whole/],
+  ['Dairy', 'Half and half', /^Cream, fluid, half and half/],
+  ['Dairy', 'Heavy cream', /^Cream, fluid, heavy whipping/],
+  ['Dairy', 'Evaporated milk, canned', /^Milk, canned, evaporated, with added vitamin A$/],
+  ['Dairy', 'Sweetened condensed milk', /^Milk, canned, condensed, sweetened/],
+  ['Dairy', 'Swiss cheese', /^Cheese, swiss$/],
+  ['Dairy', 'Provolone cheese', /^Cheese, provolone$/],
+  ['Dairy', 'Parmesan cheese, grated', /^Cheese, parmesan, grated$/],
+  ['Dairy', 'Feta cheese', /^Cheese, feta$/],
+  ['Dairy', 'Ricotta cheese', /^Cheese, ricotta, whole milk/],
+  ['Dairy', 'Blue cheese', /^Cheese, blue$/],
+  ['Dairy', 'Monterey jack cheese', /^Cheese, monterey$/],
+  ['Dairy', 'Colby cheese', /^Cheese, colby$/],
+  ['Dairy', 'Goat cheese', /^Cheese, goat, soft type/],
+  ['Dairy', 'Yogurt, low fat plain', /^Yogurt, plain, low fat$/],
+  ['Dairy', 'Yogurt, fruit low fat', /^Yogurt, fruit, low fat/],
+  ['Dairy', 'Frozen yogurt', /^Frozen yogurts, vanilla, soft-serve/],
+  ['Dairy', 'Whipped cream topping', /^Cream, whipped, cream topping, pressurized/],
+  ['Dairy', 'Egg white, raw', /^Egg, white, raw, fresh/],
+  ['Dairy', 'Egg yolk, raw', /^Egg, yolk, raw, fresh/],
+  ['Dairy', 'Egg, fried', /^Egg, whole, cooked, fried/],
+  ['Dairy', 'Cottage cheese, low fat', /^Cheese, cottage, lowfat, 2% milkfat/],
+  ['Dairy', 'Nonfat dry milk powder', /^Milk, dry, nonfat, regular, without added vitamin A and vitamin D/],
+
+  // ---- More beans & nuts ----
+  ['Beans & nuts', 'Chickpeas, cooked', /^Chickpeas \(garbanzo beans, bengal gram\), mature seeds, cooked, boiled, without salt/],
+  ['Beans & nuts', 'Navy beans, cooked', /^Beans, navy, mature seeds, cooked, boiled, without salt/],
+  ['Beans & nuts', 'Split peas, cooked', /^Peas, split, mature seeds, cooked, boiled, without salt/],
+  ['Beans & nuts', 'Great northern beans, cooked', /^Beans, great northern, mature seeds, cooked, boiled, without salt/],
+  ['Beans & nuts', 'Soy milk', /^Soymilk, original and vanilla, with added calcium, vitamins A and D/],
+  ['Beans & nuts', 'Almond milk', /^Beverages, almond milk, unsweetened, shelf stable/],
+  ['Beans & nuts', 'Pecans', /^Nuts, pecans$/],
+  ['Beans & nuts', 'Pistachios', /^Nuts, pistachio nuts, dry roasted, with salt added/],
+  ['Beans & nuts', 'Sunflower seeds', /^Seeds, sunflower seed kernels, dry roasted, with salt added/],
+  ['Beans & nuts', 'Pumpkin seeds', /^Seeds, pumpkin and squash seed kernels, roasted, with salt added/],
+  ['Beans & nuts', 'Macadamia nuts', /^Nuts, macadamia nuts, dry roasted, with salt added/],
+  ['Beans & nuts', 'Mixed nuts', /^Nuts, mixed nuts, dry roasted, with peanuts, with salt added/],
+  ['Beans & nuts', 'Peanut butter, smooth', /^Peanut butter, smooth, reduced fat/],
+  ['Beans & nuts', 'Tahini', /^Seeds, sesame butter, tahini, from roasted and toasted kernels/],
+  ['Beans & nuts', 'Edamame, cooked', /^Edamame, frozen, prepared/],
+  ['Beans & nuts', 'Hazelnuts', /^Nuts, hazelnuts or filberts$/],
+  ['Beans & nuts', 'Brazil nuts', /^Nuts, brazilnuts, dried, unblanched/],
+  ['Beans & nuts', 'Sesame seeds', /^Seeds, sesame seeds, whole, dried/],
+  ['Beans & nuts', 'Tempeh', /^Tempeh$/],
+  ['Beans & nuts', 'Soybeans, cooked', /^Soybeans, mature seeds, cooked, boiled, with salt/],
+
+  // ---- More snacks ----
+  ['Snacks', 'Cheese puffs', /^Snacks, corn-based, extruded, puffs or twists, cheese-flavor/],
+  ['Snacks', 'Corn chips', /^Snacks, corn-based, extruded, chips, plain/],
+  ['Snacks', 'Granola bar', /^Snacks, granola bars, hard, plain/],
+  ['Snacks', 'Popcorn, oil-popped', /^Snacks, popcorn, oil-popped, microwave, regular flavor/],
+  ['Snacks', 'Doughnut, glazed', /^Doughnuts, yeast-leavened, glazed, enriched/],
+  ['Snacks', 'Doughnut, cake type', /^Doughnuts, cake-type, plain/],
+  ['Snacks', 'Chocolate cake with frosting', /^Cake, chocolate, commercially prepared with chocolate frosting/],
+  ['Snacks', 'Pound cake', /^Cake, pound, commercially prepared, butter/],
+  ['Snacks', 'Chocolate pudding', /^Puddings, chocolate, ready-to-eat/],
+  ['Snacks', 'Vanilla pudding', /^Puddings, vanilla, ready-to-eat/],
+  ['Snacks', 'Oatmeal cookies', /^Cookies, oatmeal, commercially prepared, regular/],
+  ['Snacks', 'Peanut butter cookies', /^Cookies, peanut butter, commercially prepared, regular/],
+  ['Snacks', 'Animal crackers', /^Cookies, animal crackers \(includes arrowroot, tea biscuits\)/],
+  ['Snacks', 'Rice cakes', /^Snacks, rice cakes, brown rice, plain/],
+  ['Snacks', 'Trail mix', /^Snacks, trail mix, regular$/],
+  ['Snacks', 'Caramels', /^Candies, caramels$/],
+  ['Snacks', 'Gumdrops', /^Candies, gumdrops, starch jelly pieces/],
+  ['Snacks', 'Jelly beans', /^Candies, jellybeans$/],
+  ['Snacks', 'Dark chocolate', /^Candies, chocolate, dark, NFS/],
+  ['Snacks', 'Ice cream, chocolate', /^Ice creams, chocolate$/],
+  ['Snacks', 'Chocolate milkshake', /^Milk shakes, thick chocolate/],
+  ['Snacks', 'Popsicle', /^Frozen novelties, ice type, pop/],
+  ['Snacks', 'Pumpkin pie', /^Pie, pumpkin, commercially prepared/],
+  ['Snacks', 'Cherry pie', /^Pie, cherry, commercially prepared/],
+  ['Snacks', 'Danish pastry', /^Danish pastry, cheese/],
+  ['Snacks', 'Pork rinds', /^Snacks, pork skins, plain/],
+
+  // ---- More drinks ----
+  ['Drinks', 'Diet cola', /^Beverages, carbonated, low calorie, cola or pepper-type, with aspartame, contains caffeine/],
+  ['Drinks', 'Root beer', /^Beverages, carbonated, root beer$/],
+  ['Drinks', 'Orange soda', /^Beverages, carbonated, orange$/],
+  ['Drinks', 'Club soda', /^Beverages, carbonated, club soda$/],
+  ['Drinks', 'Tonic water', /^Beverages, carbonated, tonic water$/],
+  ['Drinks', 'Sports drink, low calorie', /^Beverages, PEPSICO QUAKER, Gatorade G2, low calorie/],
+  ['Drinks', 'Energy drink', /^Beverages, Energy drink, RED BULL/],
+  ['Drinks', 'Hot chocolate', /^Beverages, chocolate-flavor beverage mix, powder, prepared with whole milk$/],
+  ['Drinks', 'Instant coffee', /^Beverages, coffee, instant, regular, prepared with water/],
+  ['Drinks', 'Espresso', /^Beverages, coffee, brewed, espresso, restaurant-prepared/],
+  ['Drinks', 'Green tea, brewed', /^Beverages, tea, green, brewed, regular/],
+  ['Drinks', 'Herbal tea, brewed', /^Beverages, tea, herb, other than chamomile, brewed/],
+  ['Drinks', 'Red wine', /^Alcoholic beverage, wine, table, red$/],
+  ['Drinks', 'White wine', /^Alcoholic beverage, wine, table, white$/],
+  ['Drinks', 'Liquor, 80 proof', /^Alcoholic beverage, distilled, all \(gin, rum, vodka, whiskey\) 80 proof/],
+  ['Drinks', 'Light beer', /^Alcoholic beverage, beer, light$/],
+  ['Drinks', 'Tomato juice', /^Tomato juice, canned, with salt added/],
+  ['Drinks', 'Vegetable juice', /^Vegetable juice cocktail, canned/],
+  ['Drinks', 'Pineapple juice', /^Pineapple juice, canned or bottled, unsweetened, without added ascorbic acid/],
+  ['Drinks', 'Grapefruit juice', /^Grapefruit juice, white, canned or bottled, unsweetened/],
+  ['Drinks', 'Prune juice', /^Prune juice, canned$/],
+  ['Drinks', 'Coconut water', /^Nuts, coconut water \(liquid from coconuts\)/],
+  ['Drinks', 'Rice milk', /^Beverages, rice milk, unsweetened/],
+  ['Drinks', 'Water, tap', /^Beverages, water, tap, drinking$/],
+  ['Drinks', 'Fruit punch drink', /^Beverages, fruit punch drink, without added nutrients, canned/],
+
+  // ---- More extras ----
+  ['Extras', 'Barbecue sauce', /^Sauce, barbecue$/],
+  ['Extras', 'Salsa', /^Sauce, salsa, ready-to-serve/],
+  ['Extras', 'Hot sauce', /^Sauce, ready-to-serve, pepper or hot/],
+  ['Extras', 'Jam or preserves', /^Jams and preserves$/],
+  ['Extras', 'Jelly', /^Jellies$/],
+  ['Extras', 'Italian dressing', /^Salad dressing, italian dressing, commercial, regular/],
+  ['Extras', 'Thousand island dressing', /^Salad dressing, thousand island, commercial, regular/],
+  ['Extras', 'French dressing', /^Salad dressing, french dressing, commercial, regular/],
+  ['Extras', 'Blue cheese dressing', /^Salad dressing, blue or roquefort cheese dressing, commercial, regular/],
+  ['Extras', 'Caesar dressing', /^Salad dressing, caesar dressing, regular/],
+  ['Extras', 'Cider vinegar', /^Vinegar, cider$/],
+  ['Extras', 'Vegetable oil', /^Oil, vegetable, soybean, refined/],
+  ['Extras', 'Canola oil', /^Oil, canola$/],
+  ['Extras', 'Shortening', /^Shortening, household, soybean/],
+  ['Extras', 'Cocoa powder, unsweetened', /^Cocoa, dry powder, unsweetened$/],
+  ['Extras', 'Brown sugar', /^Sugars, brown$/],
+  ['Extras', 'Powdered sugar', /^Sugars, powdered$/],
+  ['Extras', 'Coffee creamer, powdered', /^Cream substitute, powdered$/],
+  ['Extras', 'Chicken gravy, canned', /^Gravy, chicken, canned or bottled, ready-to-serve/],
+  ['Extras', 'Cheese sauce', /^Sauce, cheese, ready-to-serve/],
+  ['Extras', 'Spaghetti sauce', /^Sauce, pasta, spaghetti\/marinara, ready-to-serve/],
+  ['Extras', 'Teriyaki sauce', /^Sauce, teriyaki, ready-to-serve/],
+  ['Extras', 'Worcestershire sauce', /^Sauce, worcestershire$/],
+  ['Extras', 'Tartar sauce', /^Sauce, tartar, ready-to-serve/],
+  ['Extras', 'Chocolate syrup', /^Syrups, chocolate, HERSHEY'S Genuine Chocolate Flavored Lite Syrup/],
+  ['Extras', 'Molasses', /^Molasses$/],
+  ['Extras', 'Black pepper', /^Spices, pepper, black$/],
+  ['Extras', 'Garlic powder', /^Spices, garlic powder$/],
+  ['Extras', 'Onion powder', /^Spices, onion powder$/],
+  ['Extras', 'Cinnamon', /^Spices, cinnamon, ground$/],
+  ['Extras', 'Baking soda', /^Leavening agents, baking soda$/],
+
+  // ---- More prepared dishes ----
+  ['Prepared', 'Lasagna, cheese', /^Lasagna, cheese, frozen, prepared/],
+  ['Prepared', 'Spaghetti with meat sauce', /^Spaghetti with meat sauce, frozen entree/],
+  ['Prepared', 'Bean burrito', /^Burrito, bean and cheese, frozen/],
+  ['Prepared', 'Beef taco', /^Fast foods, taco with beef, cheese and lettuce, hard shell/],
+  ['Prepared', 'Ham sub sandwich', /^Fast foods, submarine sandwich, ham on white bread with lettuce and tomato/],
+  ['Prepared', 'Fried rice', /^Restaurant, Chinese, fried rice, without meat/],
+  ['Prepared', 'Vegetable beef soup, canned', /^Soup, vegetable beef, canned, condensed/],
+  ['Prepared', 'Cream of mushroom soup', /^Soup, cream of mushroom, canned, condensed/],
+  ['Prepared', 'Beef noodle soup', /^Soup, beef noodle, canned, condensed/],
+  ['Prepared', 'Minestrone soup', /^Soup, minestrone, canned, condensed/],
+  ['Prepared', 'Clam chowder', /^Soup, clam chowder, new england, canned, condensed/],
+  ['Prepared', 'Ramen noodle soup', /^Soup, ramen noodle, any flavor, dry/],
+  ['Prepared', 'Pepperoni pizza', /^Pizza, pepperoni topping, regular crust, frozen, cooked/],
+  ['Prepared', 'Chicken nuggets', /^Fast foods, chicken, breaded and fried, boneless pieces, plain/],
+  ['Prepared', 'Onion rings', /^Fast foods, onion rings, breaded and fried/],
+  ['Prepared', 'Nachos with cheese', /^Fast foods, nachos, with cheese/],
+  ['Prepared', 'Egg roll, vegetable', /^Egg rolls, vegetable, frozen, prepared/],
+  ['Prepared', 'Beef stew', /^Beef stew, canned entree/],
   ['Dairy', 'Egg, scrambled', /^Egg, whole, cooked, scrambled$/]
 ];
 
@@ -217,6 +517,7 @@ function main() {
   const byDesc = foods.slice().sort((a, b) => a.description.length - b.description.length);
   const out = [];
   const missing = [];
+  const warnings = [];
 
   for (const [category, name, re] of CURATED) {
     /* Shortest matching description is reliably the plainest variant. */
@@ -270,6 +571,73 @@ function main() {
     /* Three is plenty: more than that is a wall of choices, and the generic
      * fallbacks in app.js fill any gap. */
     portions.splice(3);
+
+    /*
+     * AUTOMATED BINDING GUARDS
+     *
+     * The shortest-matching-description heuristic is fast but silently wrong
+     * sometimes, and a wrong record under a plausible name is the most damaging
+     * defect this file can produce — nobody can eyeball hundreds of bindings.
+     * Both checks below are modelled on real bugs found by reading output:
+     *
+     *   "Meatloaf"        -> "Meatballs, meatless"   (a different food)
+     *   "Oatmeal, cooked" -> dry oats                (~5x every value)
+     *
+     * These only WARN. A false alarm is cheap; a silent mis-binding is not.
+     */
+    const srcLower = hit.description.toLowerCase();
+
+    /* 1. Does the display name actually appear in the record it bound to? */
+    const nameWords = name.toLowerCase().match(/[a-z]{4,}/g) || [];
+    const STOP = ['with', 'without', 'from', 'plain', 'style', 'canned', 'cooked',
+                  'fresh', 'sliced', 'whole', 'regular', 'light', 'sweet'];
+    /* Everyday word for the same food as USDA's term. Not a loophole for a bad
+     * binding — each pair is a genuine synonym, verified individually. */
+    const SYNONYM = {
+      ketchup: 'catsup', spaghetti: 'pasta', oatmeal: 'oats', prunes: 'plums',
+      raisins: 'raisin', soda: 'carbonated', cola: 'carbonated', shrimp: 'crustacean',
+      crab: 'crustacean', lobster: 'crustacean', scallops: 'mollusk', clams: 'mollusk',
+      oysters: 'mollusk', mussels: 'mollusk', bun: 'roll', soybeans: 'soy',
+      garbanzo: 'chickpea', chickpeas: 'garbanzo', scallions: 'onions',
+      cilantro: 'coriander', zucchini: 'squash', eggplant: 'eggplant',
+      /* Reviewed individually against the bound record. */
+      choy: 'pak-choi', kielbasa: 'polish', popsicle: 'pop', jelly: 'jellies',
+      soda: 'carbonated', arugula: 'rocket'
+    };
+    const content = nameWords.filter((w) => STOP.indexOf(w) === -1);
+    if (content.length) {
+      const overlap = content.some((w) => {
+        var stem = w.replace(/(ies|es|s)$/, '');
+        if (srcLower.indexOf(stem) !== -1) return true;
+        var syn = SYNONYM[w];
+        return syn ? srcLower.indexOf(syn) !== -1 : false;
+      });
+      if (!overlap) {
+        warnings.push('NAME MISMATCH  ' + name + '  <-  ' + hit.description);
+      }
+    }
+
+    /* 2. Prepared foods must not be bound to their dry/concentrated form. */
+    const saysPrepared = /cooked|brewed|prepared|boiled|baked|roasted/i.test(name);
+    /* "dry heat" and "dry-roasted" are COOKING METHODS, not dry foods — the
+     * first version of this flagged every baked fish in the list. */
+    const dryClaim = hit.description
+      .replace(/dry[\s-]?(heat|roast(ed)?|fried)/gi, '');
+    const srcSaysDry = /,\s*dry\b|unprepared|dehydrated|\bpowder\b|condensed/i.test(dryClaim) &&
+                       !/prepared with|reconstituted/i.test(hit.description);
+    if (saysPrepared && srcSaysDry) {
+      warnings.push('DRY/PREPARED   ' + name + '  <-  ' + hit.description);
+    }
+    /* Cooked cereals and grains are mostly water; anything denser is suspect. */
+    if (/\bcooked\b/i.test(name) && /cereal|rice|pasta|oat|grits|noodle|barley|quinoa|couscous/i.test(name) &&
+        n.energy > 200) {
+      warnings.push('TOO DENSE      ' + name + ' = ' + n.energy + ' kcal/100g  <-  ' + hit.description);
+    }
+
+    /* 3. Raw and cooked are different foods with different values. */
+    if (/\braw\b/i.test(name) && /\bcooked\b/i.test(srcLower)) {
+      warnings.push('RAW/COOKED     ' + name + '  <-  ' + hit.description);
+    }
 
     out.push({
       id: hit.fdcId,
@@ -408,8 +776,12 @@ ${body}
     console.log('\nno household portions (' + noPortion.length + '): ' +
       noPortion.map((f) => f.name).join(', '));
   }
-  console.log('\n--- name -> USDA record (review for mismatches) ---');
-  out.forEach((f) => console.log('  ' + f.name.padEnd(30) + ' <- ' + f.src));
+  if (warnings.length) {
+    console.log('\n!!! ' + warnings.length + ' BINDING WARNINGS — review each one:');
+    warnings.forEach((w) => console.log('  ' + w));
+  } else {
+    console.log('\nno binding warnings');
+  }
   if (missing.length) {
     console.log('\nUNMATCHED (' + missing.length + '):');
     missing.forEach((m) => console.log('  - ' + m));

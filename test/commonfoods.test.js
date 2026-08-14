@@ -30,7 +30,7 @@ var ALL = C.all();
  * ------------------------------------------------------------------ */
 
 test('library is non-trivial and every row is well formed', function () {
-  assert(C.count >= 120, 'expected a useful library, got ' + C.count);
+  assert(C.count >= 400, 'expected a useful library, got ' + C.count);
   assert(ALL.length === C.count);
   ALL.forEach(function (f) {
     assert(typeof f.name === 'string' && f.name.length > 1, 'bad name: ' + f.name);
@@ -50,7 +50,10 @@ test('names are unique', function () {
 test('every category is populated and listed', function () {
   assert(C.CATEGORIES.length >= 8, 'got ' + C.CATEGORIES.length + ' categories');
   C.CATEGORIES.forEach(function (cat) {
-    assert(C.byCategory(cat).length > 0, 'empty category: ' + cat);
+    /* A category with a handful of entries reads as broken when tapped, so
+     * each group has to be substantial enough to browse. */
+    assert(C.byCategory(cat).length >= 20,
+      'thin category: ' + cat + ' has only ' + C.byCategory(cat).length);
   });
   ALL.forEach(function (f, i) {
     var cat = C.ROWS[i][2];

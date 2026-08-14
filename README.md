@@ -71,7 +71,7 @@ the exact false precision this app exists to reject.
 
 | Use | Source | Why |
 |---|---|---|
-| **Built-in library** | **USDA SR Legacy, bundled (`js/commonfoods.js`)** | **149 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
+| **Built-in library** | **USDA SR Legacy, bundled (`js/commonfoods.js`)** | **418 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
 | Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
@@ -95,7 +95,7 @@ hours. A food log that cannot record a banana without a round trip is not usable
 and while the proxy was undeployed, searching a brand returned nothing at all,
 which reads as a broken app rather than a missing connection.
 
-So 149 everyday foods ship with the app. They appear **as you type**, with no
+So 418 everyday foods ship with the app. They appear **as you type**, with no
 network call, and are browsable by category. SR Legacy is the source rather than
 Branded because it is laboratory-analysed: every entry has a real measured
 phosphorus *and* potassium value — exactly what 98.55% of branded records lack.
@@ -106,17 +106,35 @@ bananas, chocolate, processed cheese — rather than being skewed "kidney-friend
 This is a logbook: a log you cannot record your actual dinner in is useless, and
 what the user ate is not the app's judgment to make.
 
-Regenerate with `tools/gen-common.js` against the USDA SR Legacy bulk
-download. Two classes of bug the generator now guards against, both found by
-review rather than by crashing:
+Regenerate with `tools/gen-common.js` against the USDA SR Legacy bulk download
+(no API key needed; needs `node --max-old-space-size=6144`, the JSON is 210 MB):
 
-- **Silent record mis-binding.** "Meatloaf" matched *"Meatballs, meatless"* — a
-  completely different food under a plausible name. Every entry now ships its
-  verbatim USDA description, shown in the portion picker, and tests spot-check
-  published values.
-- **Dry-vs-prepared.** "Oatmeal, cooked" matched dry oats and "Lemonade" matched
-  the powder — off by roughly 5x and 25x. `test/commonfoods.test.js` fails if a
-  food whose name says *cooked* has the energy density of a dry mix.
+```bash
+node --max-old-space-size=6144 tools/gen-common.js /path/to/sr_legacy.json
+```
+
+Entries are matched by regex against the shortest matching USDA description,
+which is fast but silently wrong sometimes — and **a wrong record under a
+plausible name is the worst defect this file can carry**, because nobody can
+eyeball 418 bindings. So the generator warns on three patterns, each modelled
+on a real bug found by reading output rather than by anything crashing:
+
+| Guard | The bug it was written for |
+|---|---|
+| **Name mismatch** — no significant word of the display name appears in the bound record | "Meatloaf" matched *"Meatballs, meatless"* |
+| **Dry-vs-prepared** — name says cooked, record says dry/powder/unprepared | "Oatmeal, cooked" matched dry oats, "Lemonade" the powder (~5x and ~25x out) |
+| **Raw-vs-cooked** — name and record disagree | different food, different values |
+
+They only warn, since a false alarm is cheap and a silent mis-binding is not.
+Genuine synonyms (ketchup/catsup, bok choy/pak-choi, kielbasa/Polish sausage)
+are whitelisted individually after review. Tuning matters: `"dry heat"` is a
+cooking method, and the first version flagged every baked fish in the list.
+
+Every entry also ships its verbatim USDA description, shown in the portion
+picker, so any number is checkable against the source. Foods with no
+complete-panel record in SR Legacy were dropped rather than bound to something
+approximate — that removed brownies, cheesecake, buttermilk, lima beans and a
+dozen others.
 
 ### USDA API key and the proxy Worker
 
@@ -284,7 +302,7 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-js/commonfoods.js       GENERATED: 149 offline foods from USDA SR Legacy
+js/commonfoods.js       GENERATED: 418 offline foods from USDA SR Legacy (62 KB)
 test/                   157 tests (incl. worker/test)
 ```
 
