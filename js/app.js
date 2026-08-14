@@ -342,26 +342,41 @@
     var host = $('results');
     clear(host);
 
-    (errors || []).forEach(function (err) {
-      var n = el('div', 'notice');
-      n.className = 'notice strong';
-      if (err.code === 'USDA_RATE_LIMIT') {
+    /*
+     * At most ONE notice, even when several sources failed.
+     *
+     * Search fans out to two sources, so a single outage can produce two errors
+     * and previously stacked two red boxes — with the only actionable one at the
+     * bottom. Stacked errors are bad for any audience and worse for this one, so
+     * the codes are ranked by how actionable they are and the best wins. A rate
+     * limit tells the user something they can do; "check your connection" is the
+     * fallback when nothing more specific is known.
+     */
+    var codes = (errors || []).map(function (e) { return e.code; });
+    var pick = ['USDA_BAD_KEY', 'USDA_RATE_LIMIT'].filter(function (c) {
+      return codes.indexOf(c) !== -1;
+    })[0] || (codes.length ? 'GENERIC' : null);
+
+    if (pick) {
+      var n = el('div', 'notice strong');
+      if (pick === 'USDA_RATE_LIMIT') {
         n.appendChild(el('h3', null, 'The shared food database key is busy'));
         n.appendChild(el('p', null,
           'The free key everyone shares only allows about 30 searches an hour, ' +
           'and it has run out for now. Wait a few minutes, or get your own free ' +
           'key — see "Food data source" under More. Barcode scanning still works.'));
-      } else if (err.code === 'USDA_BAD_KEY') {
+      } else if (pick === 'USDA_BAD_KEY') {
         n.appendChild(el('h3', null, 'That food database key did not work'));
         n.appendChild(el('p', null,
           'Check the key under More, or clear the box to go back to the shared key.'));
       } else {
         n.appendChild(el('h3', null, 'Could not reach the food database'));
         n.appendChild(el('p', null,
-          'Check your internet connection and try again. Your log is safe on this device.'));
+          'Check your internet connection and try again. Barcode scanning may ' +
+          'still work, and your log is safe on this device.'));
       }
       host.appendChild(n);
-    });
+    }
 
     if (!foods.length) {
       host.appendChild(el('div', 'empty', 'No foods found. Try a simpler word, like "chicken" or "milk".'));
