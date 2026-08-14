@@ -1,0 +1,10 @@
+name = "kidney-food-log-api"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# The USDA key is a secret, never a var — a [vars] entry would be committed to
+# the public repo, which is the exact problem this Worker exists to solve.
+# Set it with:  wrangler secret put USDA_API_KEY
+
+[observability]
+enabled = true

@@ -80,13 +80,45 @@ no `Access-Control-Allow-Origin` header and are blocked from any browser origin 
 verified live. Only the per-product/barcode endpoint sends CORS headers. Adding OFF
 text search would require a proxy; see *Known gaps*.
 
-### USDA API key
+### USDA API key and the proxy Worker
 
-Works out of the box with the shared `DEMO_KEY`, but that key allows only about
-**30 requests/hour across all users of it**, so it runs out constantly. A free
-personal key from [api.data.gov](https://api.data.gov/signup/) takes a minute and
-is pasted into **More → Food data source**. Stored in `localStorage`, never
-transmitted anywhere but USDA.
+A static page has nowhere to hide a key: anything in the bundle is public, and
+anything in this repo is scraped within days. But the shared `DEMO_KEY` allows
+only about **30 requests/hour across every app on earth that uses it**, so search
+is broken for most visitors. Those two facts are in direct conflict, and
+`worker/` resolves them.
+
+Requests resolve in this order:
+
+| Order | Path | When | Rate |
+|---|---|---|---|
+| 1 | Direct to USDA with the user's own key | They saved one in **More → Food data source** | 1,000/hr, theirs alone |
+| 2 | Via the proxy Worker | Default for everyone else | 1,000/hr shared, mostly served from cache |
+| 3 | Direct with `DEMO_KEY` | Only if the Worker is unreachable | ~30/hr globally; expected to fail |
+
+The Worker (`worker/src/index.js`) holds the key as a Cloudflare secret, so it
+never reaches a browser. **Caching is the point, not an optimisation** — food
+composition data is effectively immutable, so responses cache at the edge for 7
+days. Without it a few hundred users would exhaust 1,000 req/hour and we would be
+back to a broken search. Queries are lowercased, whitespace-collapsed and
+`dataType`-sorted before becoming a cache key, so `"Banana Raw"` and
+`" banana  raw "` share one entry.
+
+It is deliberately **not** a general proxy: only `/usda/search`, only `GET`, only
+known origins, `pageSize` capped at 25, and unknown `dataType` values dropped
+rather than forwarded. An upstream 403 is reported as a 502 and its body is never
+echoed, because a bad-key error from USDA can quote the key back.
+
+Deploying it (one time):
+
+```bash
+cd worker && npx wrangler login && npx wrangler deploy && npx wrangler secret put USDA_API_KEY
+```
+
+`secret put` prompts for the value interactively — the key is never written to a
+file, a command line, or this repo. Then set `PROXY_BASE` in `js/foods.js` to the
+deployed `*.workers.dev` URL. If `PROXY_BASE` is left empty the app still works,
+falling straight through to step 3.
 
 ---
 
@@ -119,7 +151,14 @@ python -m http.server 8741 -d renal-log
 ```
 
 Then open <http://localhost:8741>. Already wired into `.claude/launch.json` as
-`renal-log`.
+`renal-log`. Port 8741 is in the Worker's `ALLOWED_ORIGINS`, so proxied search
+works locally too.
+
+All tests:
+
+```bash
+npm test
+```
 
 ## Barcode scanning
 

@@ -100,16 +100,43 @@
 
   var USDA_BASE = 'https://api.nal.usda.gov/fdc/v1';
 
-  /* DEMO_KEY works out of the box but is rate-limited to ~30 requests/hour and
-   * 50/day per IP. Users paste their own free key (api.data.gov) in Settings. */
+  /*
+   * Where search requests go, in priority order:
+   *
+   *   1. The user's own API key, if they saved one in Settings. Goes straight
+   *      to USDA. Their key, their 1,000 req/hour, no middleman.
+   *   2. The proxy Worker. Holds our key as a server-side secret and caches
+   *      responses at the edge, so every visitor gets full-rate search without
+   *      the key ever reaching a browser.
+   *   3. DEMO_KEY direct. The last-resort fallback if the proxy is unreachable
+   *      or unset — shared globally and capped near 30 requests/hour, so it is
+   *      expected to fail often. Kept only so the app degrades instead of dying.
+   *
+   * PROXY_BASE is empty until the Worker is deployed; the app works either way.
+   */
+  var PROXY_BASE = 'https://kidney-food-log-api.krishco06.workers.dev';
+
+  /* DEMO_KEY is rate-limited to ~30 requests/hour and 50/day, shared by every
+   * app that has ever used it. Users paste their own free key from
+   * api.data.gov in Settings. */
   var DEFAULT_USDA_KEY = 'DEMO_KEY';
 
-  function usdaKey() {
+  /** The user's own key, or '' if they have not saved one. */
+  function userUsdaKey() {
     try {
-      return localStorage.getItem('rl:usdaKey') || DEFAULT_USDA_KEY;
+      return (localStorage.getItem('rl:usdaKey') || '').trim();
     } catch (e) {
-      return DEFAULT_USDA_KEY;
+      return '';
     }
+  }
+
+  function usdaKey() {
+    return userUsdaKey() || DEFAULT_USDA_KEY;
+  }
+
+  /** True when requests will go through the Worker rather than direct. */
+  function usingProxy() {
+    return !userUsdaKey() && !!PROXY_BASE;
   }
 
   var USDA_NUTRIENT = {
@@ -195,15 +222,44 @@
     opts = opts || {};
     var types = opts.dataTypes ||
       ['Foundation', 'SR Legacy', 'Survey (FNDDS)', 'Branded'];
-    var url = USDA_BASE + '/foods/search' +
-      '?query=' + encodeURIComponent(query) +
-      '&pageSize=' + (opts.pageSize || 50) +
-      '&dataType=' + encodeURIComponent(types.join(',')) +
-      '&api_key=' + encodeURIComponent(usdaKey());
+
+    /* The proxy caps pageSize at 25 and validates dataType, so ask for what it
+     * allows rather than having it silently clamp us. */
+    /* _noProxy is set by the fallback path below and must be honoured here, or
+     * a persistent Worker outage would recurse forever. */
+    var viaProxy = !opts._noProxy && usingProxy();
+    var pageSize = opts.pageSize || (viaProxy ? 25 : 50);
+
+    var url;
+    if (viaProxy) {
+      url = PROXY_BASE + '/usda/search' +
+        '?query=' + encodeURIComponent(query) +
+        '&pageSize=' + pageSize +
+        '&dataType=' + encodeURIComponent(types.join(','));
+    } else {
+      url = USDA_BASE + '/foods/search' +
+        '?query=' + encodeURIComponent(query) +
+        '&pageSize=' + pageSize +
+        '&dataType=' + encodeURIComponent(types.join(',')) +
+        '&api_key=' + encodeURIComponent(usdaKey());
+    }
 
     return fetch(url)
       .then(usdaJson)
-      .then(function (data) { return (data.foods || []).map(usdaToFood); });
+      .then(function (data) { return (data.foods || []).map(usdaToFood); })
+      .catch(function (err) {
+        /*
+         * If the proxy itself is down or misconfigured, fall back to a direct
+         * DEMO_KEY call rather than showing the user nothing. DEMO_KEY is
+         * heavily throttled so this often fails too — but a throttle notice is
+         * a better outcome than an empty screen, and it means a Worker outage
+         * degrades the app instead of breaking it.
+         */
+        if (viaProxy && err && err.message !== 'USDA_RATE_LIMIT') {
+          return usdaSearch(query, Object.assign({}, opts, { _noProxy: true, pageSize: 50 }));
+        }
+        throw err;
+      });
   }
 
   /* Barcode fallback when Open Food Facts does not have the product. */

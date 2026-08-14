@@ -1,0 +1,15 @@
+{
+  "name": "kidney-food-log",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A food log for people on dialysis that shows what the data does not know, instead of counting missing phosphorus as zero.",
+  "scripts": {
+    "test": "node test/scanner.test.js && node test/log.test.js && node test/barcode.test.js && node worker/test/worker.test.js",
+    "test:scanner": "node test/scanner.test.js",
+    "test:log": "node test/log.test.js",
+    "test:barcode": "node test/barcode.test.js",
+    "test:worker": "node worker/test/worker.test.js",
+    "deploy:worker": "wrangler deploy --cwd worker"
+  },
+  "license": "MIT"
+}

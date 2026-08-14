@@ -1,0 +1,12 @@
+{
+  "name": "kidney-food-log-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker proxying USDA FoodData Central so the API key never reaches the browser.",
+  "scripts": {
+    "test": "node test/worker.test.js",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  }
+}
