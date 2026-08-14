@@ -23,13 +23,13 @@
  *     records mostly lack both minerals BUT do carry the printed `ingredients`
  *     string, which is what the additive scanner needs. CORS-clean.
  *
- *   Open Food Facts — used ONLY for barcode lookup.
+ *   Open Food Facts — barcode lookup directly, text search via the proxy.
  *     Verified against the live API: the product/barcode endpoint sends CORS
  *     headers, but every OFF *search* endpoint (cgi/search.pl, api/v2/search,
  *     search.openfoodfacts.org) returns no Access-Control-Allow-Origin and is
- *     therefore unusable from a browser page. Text search via OFF would require
- *     a server-side proxy, which v1 deliberately does not have — this app is a
- *     static site with no backend and no running costs.
+ *     unusable from a browser page. OFF text search therefore runs through the
+ *     Worker in worker/, and is simply unavailable when no proxy is configured
+ *     — search falls back to USDA only rather than failing.
  *
  * A worked example of why this app exists, straight from a live USDA Branded
  * record (Kroger "DELI SHAVED TURKEY", gtin 011110966551): the record carries
@@ -359,15 +359,42 @@
   }
 
   /*
-   * NOTE: there is deliberately no offSearch().
+   * Open Food Facts text search — available ONLY through the proxy Worker.
    *
-   * Every Open Food Facts text-search endpoint was tested from a browser origin
-   * and all three are blocked by CORS (no Access-Control-Allow-Origin):
-   *   /cgi/search.pl, /api/v2/search, and search.openfoodfacts.org/search.
-   * Only the per-product/barcode endpoint above sends CORS headers.
+   * Every OFF text-search endpoint was tested from a browser origin and all
+   * three are blocked by CORS (no Access-Control-Allow-Origin): /cgi/search.pl,
+   * /api/v2/search, and search.openfoodfacts.org/search. Only the per-barcode
+   * endpoint above sends CORS headers. So this is not something the client can
+   * do directly, at all, ever — it is a proxy-only capability.
    *
-   * Adding OFF text search would require a proxy. See README for that trade-off.
+   * It matters more than a normal search source: USDA Branded coverage of
+   * everyday supermarket products is patchy, and the ingredient list is what
+   * the additive scanner reads. Without this, packaged foods are findable only
+   * by barcode — which means the app's core feature is out of reach for anyone
+   * who does not have the package in their hand.
+   *
+   * Returns [] rather than throwing when no proxy is configured, so search
+   * degrades to USDA-only instead of failing.
    */
+  function offSearch(query, opts) {
+    opts = opts || {};
+    if (!PROXY_BASE) return Promise.resolve([]);
+
+    var url = PROXY_BASE + '/off/search' +
+      '?query=' + encodeURIComponent(query) +
+      '&pageSize=' + (opts.pageSize || 20);
+
+    return fetch(url)
+      .then(function (res) {
+        if (!res.ok) throw new Error('OFF_HTTP_' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        return (data.products || [])
+          .filter(function (p) { return p && p.product_name; })
+          .map(offToFood);
+      });
+  }
 
   /**
    * Look up a barcode. Open Food Facts first (much larger barcode coverage,
@@ -397,25 +424,54 @@
    */
   function search(query, opts) {
     var errors = [];
-    return usdaSearch(query, opts)
-      .catch(function (e) {
-        errors.push({ source: 'usda', code: e.message });
-        return [];
-      })
-      .then(function (foods) {
-        foods.forEach(function (f, i) {
-          var score = 0;
-          if (f.nutrients.phosphorus !== null) score += 4;
-          if (f.nutrients.potassium !== null) score += 2;
-          if (f.scan && f.scan.scanned) score += 1;
-          f._rank = score;
-          f._order = i;
-        });
-        foods.sort(function (a, b) {
-          return (b._rank - a._rank) || (a._order - b._order);
-        });
-        return { foods: foods, errors: errors };
+
+    /* Both sources run concurrently: one being slow or down must not hold up
+     * the other, and a partial result beats an error page for this population. */
+    var usda = usdaSearch(query, opts).catch(function (e) {
+      errors.push({ source: 'usda', code: e.message });
+      return [];
+    });
+    var off = offSearch(query, opts).catch(function (e) {
+      errors.push({ source: 'off', code: e.message });
+      return [];
+    });
+
+    return Promise.all([usda, off]).then(function (r) {
+      var merged = r[0].slice();
+
+      /* A branded product can appear in both USDA Branded (via gtinUpc) and
+       * OFF. Prefer the USDA record already in hand and drop the duplicate,
+       * so the user does not see the same package listed twice. */
+      var seen = Object.create(null);
+      merged.forEach(function (f) { if (f.barcode) seen[f.barcode] = true; });
+      r[1].forEach(function (f) {
+        if (f.barcode && seen[f.barcode]) return;
+        if (f.barcode) seen[f.barcode] = true;
+        merged.push(f);
       });
+
+      /*
+       * Ranked by how useful the record is to a renal user, which is NOT the
+       * same as search relevance: a lab-analyzed generic food that reports
+       * phosphorus is worth more than a branded product reporting neither
+       * mineral, even if the brand matches the query better. A readable
+       * ingredient list is worth something on its own, because the additive
+       * scanner can work with it even when every nutrient value is missing.
+       */
+      merged.forEach(function (f, i) {
+        var score = 0;
+        if (f.nutrients.phosphorus !== null) score += 4;
+        if (f.nutrients.potassium !== null) score += 2;
+        if (f.scan && f.scan.scanned) score += 1;
+        f._rank = score;
+        f._order = i;
+      });
+      merged.sort(function (a, b) {
+        return (b._rank - a._rank) || (a._order - b._order);
+      });
+
+      return { foods: merged, errors: errors };
+    });
   }
 
   /* ------------------------------------------------------------------ *
@@ -450,6 +506,9 @@
     usdaBarcode: usdaBarcode,
     barcode: barcode,
     offBarcode: offBarcode,
+    offSearch: offSearch,
+    usingProxy: usingProxy,
+    PROXY_BASE: PROXY_BASE,
     usdaToFood: usdaToFood,
     offToFood: offToFood,
     offMineralMg: offMineralMg,

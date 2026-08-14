@@ -72,13 +72,19 @@ the exact false precision this app exists to reject.
 | Use | Source | Why |
 |---|---|---|
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
+| Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
 
-**Open Food Facts text search is not used, and cannot be.** All three OFF search
-endpoints (`/cgi/search.pl`, `/api/v2/search`, `search.openfoodfacts.org`) return
-no `Access-Control-Allow-Origin` header and are blocked from any browser origin —
-verified live. Only the per-product/barcode endpoint sends CORS headers. Adding OFF
-text search would require a proxy; see *Known gaps*.
+**Open Food Facts text search cannot be called from a browser.** All three OFF
+search endpoints (`/cgi/search.pl`, `/api/v2/search`, `search.openfoodfacts.org`)
+return no `Access-Control-Allow-Origin` header — verified live. Only the
+per-product/barcode endpoint sends CORS headers. It therefore runs through
+`worker/`, and is simply unavailable if no proxy is configured (search degrades
+to USDA-only rather than failing).
+
+This is not a nice-to-have. Without it, packaged foods are findable only by
+barcode — so the additive scanner, the app's whole reason to exist, is out of
+reach for anyone who does not have the package in their hand.
 
 ### USDA API key and the proxy Worker
 
@@ -104,10 +110,31 @@ back to a broken search. Queries are lowercased, whitespace-collapsed and
 `dataType`-sorted before becoming a cache key, so `"Banana Raw"` and
 `" banana  raw "` share one entry.
 
-It is deliberately **not** a general proxy: only `/usda/search`, only `GET`, only
-known origins, `pageSize` capped at 25, and unknown `dataType` values dropped
-rather than forwarded. An upstream 403 is reported as a 502 and its body is never
-echoed, because a bad-key error from USDA can quote the key back.
+It is deliberately **not** a general proxy: only `/usda/search` and `/off/search`,
+only `GET`, only known origins, `pageSize` capped, and unknown `dataType` values
+dropped rather than forwarded. An upstream 403 is reported as a 502 and its body
+is never echoed, because a bad-key error from USDA can quote the key back.
+
+**Retries and stale-on-error are load-bearing, not polish.** Measured against
+the live OFF search endpoint: it returns its "Page temporarily unavailable" 503
+about **half the time**, independent of the query. Over 10 real searches,
+first-attempt success was 5/10 and 3 attempts got 10/10, averaging 1.70
+attempts. Without retries, half of all packaged-food searches would fail.
+
+Entries are retained for 30 days but considered *fresh* for 7 days (USDA) or 24
+hours (OFF), tracked via our own `X-Fetched-At` rather than `Cache-Control`,
+because an expired entry is evicted and cannot be served stale. When the
+upstream is down and a retained copy exists, it is served with `X-Cache: STALE`
+— week-old composition data beats an error message, since a banana's potassium
+has not changed. A `200` carrying HTML (OFF's overload page, api.data.gov's
+nginx error page) is treated as a failure rather than passed through, which is
+what stops the user seeing `Unexpected token '<'`.
+
+OFF text search uses the **US-scoped** host. Verified side by side: `world`
+returns Spanish, Bulgarian and French deli meat for "turkey breast"; `us`
+returns Hillshire Farm and Applegate. A result the user cannot buy is worse than
+no result. Barcode lookup still uses the world database, since a scanned UPC is
+unambiguous and coverage matters more there.
 
 Deploying it (one time):
 
@@ -217,7 +244,7 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-test/                   93 tests
+test/                   135 tests (incl. worker/test)
 ```
 
 ---
@@ -233,8 +260,9 @@ test/                   93 tests
    (`RenalBarcode.decodeImageData`) and swapping it is a contained change.
 2. **No restaurant data.** Nutritionix is the strongest source and costs ~$1,850/mo.
    Out of scope for a $0 v1.
-3. **OFF text search needs a proxy** (a small Cloudflare Worker would do it, and
-   would also let us cache USDA responses to sidestep the rate limit).
+3. ~~**OFF text search needs a proxy.**~~ Done — `worker/` proxies both OFF
+   search and USDA, and caches each at the edge. Packaged foods are now findable
+   by name, not only by barcode.
 4. **Portion estimation is coarse.** Gram chips plus manual entry; no photo
    estimation, which the briefing flags as a major error source anyway.
 5. **No caregiver/proxy accounts** yet, though the briefing calls for them.

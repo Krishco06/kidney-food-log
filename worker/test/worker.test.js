@@ -11,7 +11,9 @@
  *      motivated this proxy comes straight back.
  */
 
-import worker, { normalizeSearchParams, isAllowedOrigin, corsHeaders } from '../src/index.js';
+import worker, {
+  normalizeUsdaParams, normalizeOffParams, isAllowedOrigin, corsHeaders
+} from '../src/index.js';
 
 let passed = 0;
 const failed = [];
@@ -31,16 +33,30 @@ const KEY = 'SECRET_TEST_KEY_DO_NOT_LEAK';
  * Test doubles
  * ------------------------------------------------------------------ */
 
+/* Headers must round-trip: freshness is tracked via X-Fetched-At, so a cache
+ * double that drops headers would make every entry look permanently stale. */
 function makeCache() {
   const store = new Map();
   return {
     store,
     async match(req) {
       const hit = store.get(req.url);
-      return hit ? new Response(hit, { status: 200 }) : undefined;
+      return hit ? new Response(hit.body, { status: 200, headers: hit.headers }) : undefined;
     },
-    async put(req, res) { store.set(req.url, await res.text()); }
+    async put(req, res) {
+      const headers = {};
+      res.headers.forEach((v, k) => { headers[k] = v; });
+      store.set(req.url, { body: await res.text(), headers });
+    }
   };
+}
+
+/* Age a cached entry past its freshness window without waiting. */
+function ageCache(cache, seconds) {
+  for (const [k, v] of cache.store) {
+    v.headers['x-fetched-at'] = String(Date.now() - seconds * 1000);
+    cache.store.set(k, v);
+  }
 }
 
 /* waitUntil must run synchronously enough for assertions; collect the promises. */
@@ -72,7 +88,8 @@ const okUpstream = () => new Response(OK_BODY, { status: 200 });
  * Parameter normalisation
  * ------------------------------------------------------------------ */
 
-const norm = (qs) => normalizeSearchParams(new URLSearchParams(qs));
+const norm = (qs) => normalizeUsdaParams(new URLSearchParams(qs));
+const normOff = (qs) => normalizeOffParams(new URLSearchParams(qs));
 
 await test('rejects an empty query', () => {
   const r = norm('query=');
@@ -293,6 +310,92 @@ await test('a different search is a separate cache entry', async () => {
   assert(cache.store.size === 2, 'expected 2 cache entries, got ' + cache.store.size);
 });
 
+/* ------------------------------------------------------------------ *
+ * Open Food Facts search
+ *
+ * This endpoint is the reason packaged foods are findable by name at all —
+ * every OFF search endpoint omits CORS headers, so the browser cannot call
+ * them directly. Packaged foods are where the phosphate additives are, so
+ * this is not a convenience route.
+ * ------------------------------------------------------------------ */
+
+const OFF_BODY = JSON.stringify({
+  count: 1,
+  products: [{ code: '5022240016103', product_name: 'Roasted Turkey Slices' }]
+});
+const okOff = () => new Response(OFF_BODY, { status: 200 });
+
+await test('OFF search normalises query and caps pageSize independently', () => {
+  assert(normOff('query=%20Turkey%20%20Breast%20').params.get('query') === 'turkey breast');
+  assert(normOff('query=x&pageSize=999').params.get('pageSize') === '20', 'OFF caps at 20');
+  assert(!normOff('query=').ok, 'empty query rejected');
+});
+
+await test('OFF search proxies to the CORS-blocked endpoint', async () => {
+  const calls = mockFetch(okOff);
+  const res = await call('/off/search?query=turkey%20breast');
+  assert(res.status === 200, 'got ' + res.status);
+  assert(calls.length === 1, 'must call upstream');
+  assert(calls[0].includes('search.pl'), 'wrong endpoint: ' + calls[0]);
+  assert(calls[0].includes('us.openfoodfacts.org'),
+    'must use the US-scoped host — world returns products US shoppers cannot buy: ' + calls[0]);
+  assert(calls[0].includes('search_terms=turkey+breast') ||
+         calls[0].includes('search_terms=turkey%20breast'), 'query not forwarded: ' + calls[0]);
+  assert(await res.text() === OFF_BODY);
+});
+
+await test('OFF search requests only the fields the client reads', async () => {
+  // OFF returns enormous documents otherwise, and we pay that bandwidth twice.
+  const calls = mockFetch(okOff);
+  await call('/off/search?query=turkey');
+  const u = decodeURIComponent(calls[0]);
+  assert(u.includes('ingredients_text'), 'ingredient text is the whole point');
+  assert(u.includes('additives_tags'), 'additive tags feed the scanner');
+  assert(u.includes('nutriments'));
+});
+
+await test('OFF search sends an identifying User-Agent', async () => {
+  // OFF's usage policy asks for one, and a browser cannot set this header.
+  // Being able to is a real benefit of proxying, not an incidental detail.
+  let seen = null;
+  globalThis.fetch = async (u, opts) => { seen = opts && opts.headers; return okOff(); };
+  await call('/off/search?query=turkey');
+  const ua = seen && (seen['User-Agent'] || seen['user-agent']);
+  assert(ua && ua.includes('KidneyFoodLog'), 'missing UA: ' + JSON.stringify(seen));
+});
+
+await test('OFF search caches separately from USDA', async () => {
+  const cache = makeCache();
+  const calls = mockFetch(async (u) => (u.includes('usda') || u.includes('nal.usda')) ? okUpstream() : okOff());
+
+  const c1 = makeCtx();
+  await call('/usda/search?query=turkey', { cache, ctx: c1 });
+  await c1.settle();
+  const c2 = makeCtx();
+  await call('/off/search?query=turkey', { cache, ctx: c2 });
+  await c2.settle();
+
+  assert(calls.length === 2, 'same term on different upstreams must not collide');
+  assert(cache.store.size === 2, 'expected 2 entries, got ' + cache.store.size);
+
+  const hit = await call('/off/search?query=turkey', { cache, ctx: makeCtx() });
+  assert(hit.headers.get('X-Cache') === 'HIT');
+  assert(await hit.text() === OFF_BODY, 'must return the OFF body, not the USDA one');
+});
+
+await test('OFF search needs no API key', async () => {
+  // Unlike USDA, OFF is open — a missing USDA secret must not block it.
+  mockFetch(okOff);
+  const res = await call('/off/search?query=turkey', { env: {} });
+  assert(res.status === 200, 'got ' + res.status);
+});
+
+await test('OFF search honours origin restrictions', async () => {
+  mockFetch(okOff);
+  const res = await call('/off/search?query=turkey', { origin: 'https://evil.example.com' });
+  assert(res.status === 403, 'got ' + res.status);
+});
+
 await test('failures are not cached', async () => {
   const cache = makeCache();
   mockFetch(async () => new Response('rate limited', { status: 429 }));
@@ -300,6 +403,136 @@ await test('failures are not cached', async () => {
   await call('/usda/search?query=banana', { cache, ctx });
   await ctx.settle();
   assert(cache.store.size === 0, 'a 429 must not poison the cache');
+});
+
+/* ------------------------------------------------------------------ *
+ * Upstream flakiness
+ *
+ * Measured against the live Open Food Facts search endpoint: it returns its
+ * "Page temporarily unavailable" 503 roughly half the time, independent of the
+ * query. A single-attempt proxy would be unusable, so retries and stale-on-
+ * error are load-bearing, not defensive polish.
+ * ------------------------------------------------------------------ */
+
+await test('retries a transient 503 and succeeds', async () => {
+  let n = 0;
+  mockFetch(async () => (++n < 3 ? new Response('<html>busy</html>', { status: 503 }) : okOff()));
+  const res = await call('/off/search?query=turkey');
+  assert(res.status === 200, 'got ' + res.status + ' after ' + n + ' attempts');
+  assert(n === 3, 'expected 3 attempts, got ' + n);
+});
+
+await test('gives up after the retry budget', async () => {
+  let n = 0;
+  mockFetch(async () => { n++; return new Response('<html>busy</html>', { status: 503 }); });
+  const res = await call('/off/search?query=turkey');
+  assert(res.status === 502, 'got ' + res.status);
+  assert(n === 3, 'expected exactly 3 attempts, got ' + n);
+});
+
+await test('does NOT retry a rate limit or an auth failure', async () => {
+  // Retrying a 429 makes it worse, and a bad key will never fix itself.
+  let n = 0;
+  mockFetch(async () => { n++; return new Response('slow down', { status: 429 }); });
+  assert((await call('/usda/search?query=banana')).status === 429);
+  assert(n === 1, 'a 429 must not be retried, got ' + n + ' attempts');
+
+  n = 0;
+  mockFetch(async () => { n++; return new Response('bad key', { status: 403 }); });
+  assert((await call('/usda/search?query=banana')).status === 502);
+  assert(n === 1, 'a 403 must not be retried, got ' + n + ' attempts');
+});
+
+await test('treats a 200 carrying HTML as an upstream failure', async () => {
+  // OFF serves an HTML overload page and api.data.gov an nginx error page.
+  // Passing either through surfaces to the user as "Unexpected token '<'".
+  let n = 0;
+  mockFetch(async () => { n++; return new Response('<!DOCTYPE html><html>oops', { status: 200 }); });
+  const res = await call('/off/search?query=turkey');
+  assert(res.status === 502, 'HTML must not pass through as success: ' + res.status);
+  assert(n === 3, 'non-JSON should be retried, got ' + n);
+});
+
+await test('a 200 carrying HTML never reaches the cache', async () => {
+  const cache = makeCache();
+  mockFetch(async () => new Response('<!DOCTYPE html>nope', { status: 200 }));
+  const ctx = makeCtx();
+  await call('/off/search?query=turkey', { cache, ctx });
+  await ctx.settle();
+  assert(cache.store.size === 0, 'must not cache a non-JSON body');
+});
+
+await test('serves a stale copy when the upstream is down', async () => {
+  const cache = makeCache();
+
+  mockFetch(okOff);
+  const c1 = makeCtx();
+  await call('/off/search?query=turkey', { cache, ctx: c1 });
+  await c1.settle();
+
+  ageCache(cache, 60 * 60 * 48); // past OFF's 24h freshness window
+
+  mockFetch(async () => new Response('<html>busy</html>', { status: 503 }));
+  const res = await call('/off/search?query=turkey', { cache, ctx: makeCtx() });
+
+  assert(res.status === 200, 'stale beats an error page: got ' + res.status);
+  assert(res.headers.get('X-Cache') === 'STALE', 'got ' + res.headers.get('X-Cache'));
+  assert(await res.text() === OFF_BODY, 'must return the retained body');
+});
+
+await test('a stale entry is refreshed when the upstream recovers', async () => {
+  const cache = makeCache();
+  mockFetch(okOff);
+  const c1 = makeCtx();
+  await call('/off/search?query=turkey', { cache, ctx: c1 });
+  await c1.settle();
+
+  ageCache(cache, 60 * 60 * 48);
+
+  const NEWER = JSON.stringify({ count: 2, products: [{ code: '1', product_name: 'Updated' }] });
+  mockFetch(async () => new Response(NEWER, { status: 200 }));
+  const c2 = makeCtx();
+  const res = await call('/off/search?query=turkey', { cache, ctx: c2 });
+  await c2.settle();
+
+  assert(res.headers.get('X-Cache') === 'MISS', 'should refetch, got ' + res.headers.get('X-Cache'));
+  assert(await res.text() === NEWER, 'must return the fresh body');
+
+  const again = await call('/off/search?query=turkey', { cache, ctx: makeCtx() });
+  assert(again.headers.get('X-Cache') === 'HIT');
+  assert(await again.text() === NEWER, 'cache must now hold the fresh body');
+});
+
+await test('no stale copy means a real error, not a silent empty result', async () => {
+  const cache = makeCache();
+  mockFetch(async () => new Response('<html>busy</html>', { status: 503 }));
+  const res = await call('/off/search?query=turkey', { cache, ctx: makeCtx() });
+  assert(res.status === 502, 'got ' + res.status);
+  const body = await res.json();
+  assert(body.error, 'must carry an error message');
+});
+
+await test('USDA and OFF have independent freshness windows', async () => {
+  // USDA analytical data never changes (7d); OFF is crowdsourced and
+  // corrections land continuously (24h).
+  const cache = makeCache();
+  mockFetch(async (u) => (u.includes('nal.usda') ? okUpstream() : okOff()));
+
+  const c1 = makeCtx();
+  await call('/usda/search?query=banana', { cache, ctx: c1 });
+  await c1.settle();
+  const c2 = makeCtx();
+  await call('/off/search?query=banana', { cache, ctx: c2 });
+  await c2.settle();
+
+  ageCache(cache, 60 * 60 * 48); // 48h: stale for OFF, still fresh for USDA
+
+  const usdaRes = await call('/usda/search?query=banana', { cache, ctx: makeCtx() });
+  assert(usdaRes.headers.get('X-Cache') === 'HIT', 'USDA still fresh at 48h');
+
+  mockFetch(async () => new Response('<html>busy</html>', { status: 503 }));
+  const offRes = await call('/off/search?query=banana', { cache, ctx: makeCtx() });
+  assert(offRes.headers.get('X-Cache') === 'STALE', 'OFF stale at 48h');
 });
 
 /* ------------------------------------------------------------------ */
