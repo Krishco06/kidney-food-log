@@ -64,7 +64,10 @@
         <label for="q">Search for a food</label>
         <input type="search" id="q" placeholder="chicken breast, banana, cheese…"
                autocomplete="off" enterkeyhint="search">
-        <p class="hint">Try plain names like "banana raw" or a brand name.</p>
+        <p class="hint">
+          Built-in foods appear as you type. Press Search to also look online for
+          brands and packaged foods.
+        </p>
       </div>
       <div class="row-2">
         <button class="primary" id="searchBtn">Search</button>
@@ -86,8 +89,30 @@
       </div>
     </div>
 
-    <div class="card">
-      <h2>Add a drink</h2>
+    <!--
+      Results sit directly under the search box. They used to come after the
+      drink card, which meant searching pushed your results off-screen behind a
+      block of controls you were not using.
+    -->
+    <div id="results" aria-live="polite"></div>
+
+    <!--
+      The offline library. Needs no network, no key and no proxy, so it is the
+      one part of Add that always works — on dialysis-unit wifi, on a metered
+      plan, on a plane.
+    -->
+    <div class="card" id="commonCard">
+      <h2>Common foods</h2>
+      <p class="hint">
+        Built in to the app. These work with no internet, and every one has a
+        real phosphorus and potassium number measured in a lab.
+      </p>
+      <div class="chips" id="commonCats" role="group" aria-label="Food groups"></div>
+      <div id="commonList"></div>
+    </div>
+
+    <details class="card" id="drinkCard">
+      <summary>Add a drink</summary>
       <p class="hint">
         Fluid adds up fast between dialysis days. Soup, gelatin, ice cream and ice
         all count as fluid too.
@@ -110,9 +135,7 @@
         search for it or scan the can or bottle above. Dark colas usually contain
         phosphoric acid, which your body absorbs almost completely.
       </p>
-    </div>
-
-    <div id="results" aria-live="polite"></div>
+    </details>
   </section>
 
   <!-- ============================================================ -->
@@ -261,6 +284,7 @@
 </nav>
 
 <script src="js/additives.js"></script>
+<script src="js/commonfoods.js"></script>
 <script src="js/scanner.js"></script>
 <script src="js/barcode.js"></script>
 <script src="js/units.js"></script>

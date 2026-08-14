@@ -11,13 +11,14 @@
  */
 
 /* Bump on every shell change so returning users pick up the new bundle. */
-var CACHE = 'kidney-food-log-v2';
+var CACHE = 'kidney-food-log-v3';
 
 var SHELL = [
   './',
   'index.html',
   'css/app.css',
   'js/additives.js',
+  'js/commonfoods.js',
   'js/scanner.js',
   'js/barcode.js',
   'js/units.js',

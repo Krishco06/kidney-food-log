@@ -71,6 +71,7 @@ the exact false precision this app exists to reject.
 
 | Use | Source | Why |
 |---|---|---|
+| **Built-in library** | **USDA SR Legacy, bundled (`js/commonfoods.js`)** | **149 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
 | Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
@@ -85,6 +86,37 @@ to USDA-only rather than failing).
 This is not a nice-to-have. Without it, packaged foods are findable only by
 barcode — so the additive scanner, the app's whole reason to exist, is out of
 reach for anyone who does not have the package in their hand.
+
+### The built-in library
+
+Search needs a network, a key and a working proxy. This audience includes people
+on dialysis-unit wifi, on old phones, on metered data, three days a week for four
+hours. A food log that cannot record a banana without a round trip is not usable —
+and while the proxy was undeployed, searching a brand returned nothing at all,
+which reads as a broken app rather than a missing connection.
+
+So 149 everyday foods ship with the app. They appear **as you type**, with no
+network call, and are browsable by category. SR Legacy is the source rather than
+Branded because it is laboratory-analysed: every entry has a real measured
+phosphorus *and* potassium value — exactly what 98.55% of branded records lack.
+Records with an incomplete panel were dropped rather than shipped with gaps.
+
+The list deliberately spans the full potassium and phosphorus range — potatoes,
+bananas, chocolate, processed cheese — rather than being skewed "kidney-friendly".
+This is a logbook: a log you cannot record your actual dinner in is useless, and
+what the user ate is not the app's judgment to make.
+
+Regenerate with `tools/gen-common.js` against the USDA SR Legacy bulk
+download. Two classes of bug the generator now guards against, both found by
+review rather than by crashing:
+
+- **Silent record mis-binding.** "Meatloaf" matched *"Meatballs, meatless"* — a
+  completely different food under a plausible name. Every entry now ships its
+  verbatim USDA description, shown in the portion picker, and tests spot-check
+  published values.
+- **Dry-vs-prepared.** "Oatmeal, cooked" matched dry oats and "Lemonade" matched
+  the powder — off by roughly 5x and 25x. `test/commonfoods.test.js` fails if a
+  food whose name says *cooked* has the energy density of a dry mix.
 
 ### USDA API key and the proxy Worker
 
@@ -225,7 +257,7 @@ gradients you get holding a phone over a curved package.
 npm test
 ```
 
-135 tests across four suites (scanner 36, log 27, barcode 30, worker 42).
+157 tests across five suites (scanner 36, log 27, barcode 30, common foods 22, worker 42).
 
 The scanner and barcode suites are the highest-value ones — both test *both
 directions*, because a miss and a false positive fail the user in different
@@ -252,7 +284,8 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-test/                   135 tests (incl. worker/test)
+js/commonfoods.js       GENERATED: 149 offline foods from USDA SR Legacy
+test/                   157 tests (incl. worker/test)
 ```
 
 ---

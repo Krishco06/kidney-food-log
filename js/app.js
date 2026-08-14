@@ -21,6 +21,7 @@
   var Units = window.RenalUnits;
   var Foods = window.RenalFoods;
   var Log = window.RenalLog;
+  var CommonFoods = window.RenalCommonFoods;
 
   var state = {
     screen: 'today',
@@ -338,10 +339,35 @@
     return out;
   }
 
-  function renderResults(foods, errors) {
-    var host = $('results');
-    clear(host);
+  /* One row renderer for every list, so a built-in food and a searched food
+   * look and behave identically. */
+  function foodRow(food) {
+    var btn = el('button', 'result');
+    btn.appendChild(el('div', 'name', food.name));
 
+    var meta = [];
+    if (food.brand) meta.push(food.brand);
+    if (food.source === 'usda') {
+      meta.push('USDA' + (food.dataType ? ' · ' + food.dataType : ''));
+    } else if (food.source === 'off') {
+      meta.push('Open Food Facts');
+    }
+    btn.appendChild(el('div', 'meta', meta.join(' · ')));
+    btn.appendChild(dataQualityBadges(food));
+
+    btn.addEventListener('click', function () { openPortion(food); });
+    return btn;
+  }
+
+  /**
+   * Append at most one error notice. Returns true if it added one.
+   *
+   * `resultCount` matters: when the built-in library already answered the
+   * query, a failed online lookup is a footnote, not a failure — so the wording
+   * has to change rather than telling someone staring at ten usable results
+   * that nothing could be found.
+   */
+  function renderSearchErrors(host, errors, resultCount) {
     /*
      * At most ONE notice, even when several sources failed.
      *
@@ -359,6 +385,17 @@
 
     if (pick) {
       var n = el('div', 'notice strong');
+      /* Softened when the built-in list already answered: the search worked,
+       * we just could not add the online extras. */
+      if (resultCount) {
+        n.className = 'notice';
+        n.appendChild(el('h3', null, 'Could not also search online'));
+        n.appendChild(el('p', null,
+          'The foods above are from the built-in list and are ready to use. ' +
+          'Online brands and packaged foods are not available right now.'));
+        host.appendChild(n);
+        return true;
+      }
       if (pick === 'USDA_RATE_LIMIT') {
         n.appendChild(el('h3', null, 'The shared food database key is busy'));
         n.appendChild(el('p', null,
@@ -376,43 +413,128 @@
           'still work, and your log is safe on this device.'));
       }
       host.appendChild(n);
+      return true;
     }
 
-    if (!foods.length) {
-      host.appendChild(el('div', 'empty', 'No foods found. Try a simpler word, like "chicken" or "milk".'));
-      return;
+    if (!resultCount) {
+      host.appendChild(el('div', 'empty',
+        'No foods found. Try a simpler word, like "chicken" or "milk".'));
     }
+    return false;
+  }
 
-    foods.forEach(function (food) {
-      var btn = el('button', 'result');
-      btn.appendChild(el('div', 'name', food.name));
+  function renderResults(foods, errors) {
+    var host = $('results');
+    clear(host);
+    toggleCommon(false);
+    if (foods.length) {
+      foods.forEach(function (food) { host.appendChild(foodRow(food)); });
+    }
+    renderSearchErrors(host, errors, foods.length);
+  }
 
-      var meta = [];
-      if (food.brand) meta.push(food.brand);
-      meta.push(food.source === 'usda' ? 'USDA' + (food.dataType ? ' · ' + food.dataType : '')
-                                       : 'Open Food Facts');
-      btn.appendChild(el('div', 'meta', meta.join(' · ')));
-      btn.appendChild(dataQualityBadges(food));
+  /* ------------------------------------------------------------------ *
+   * SEARCH
+   *
+   * Two tiers, deliberately. The built-in library answers instantly with no
+   * network at all, so typing always produces something; the online sources are
+   * an explicit second step. Before this, a rate-limited key or a dead proxy
+   * meant typing a food and getting nothing back, which reads as a broken app
+   * rather than a missing connection.
+   * ------------------------------------------------------------------ */
 
-      btn.addEventListener('click', function () { openPortion(food); });
-      host.appendChild(btn);
-    });
+  var searchDebounce = null;
+
+  function sectionHeading(text, hint) {
+    var wrap = el('div', 'section-head');
+    wrap.appendChild(el('h3', null, text));
+    if (hint) wrap.appendChild(el('p', 'hint', hint));
+    return wrap;
+  }
+
+  /* Runs on every keystroke against ~149 local rows. No network, no spinner. */
+  function renderLocalMatches(q) {
+    var host = $('results');
+    clear(host);
+    if (q.length < 2) { toggleCommon(true); return; }
+
+    var local = CommonFoods.search(q);
+    toggleCommon(false);
+
+    if (local.length) {
+      host.appendChild(sectionHeading(
+        local.length + ' built-in ' + (local.length === 1 ? 'food' : 'foods'),
+        'Ready to add now. Press Search to also look online for brands.'));
+      local.forEach(function (f) { host.appendChild(foodRow(f)); });
+    } else {
+      host.appendChild(el('div', 'empty',
+        'Nothing in the built-in list matches. Press Search to look online.'));
+    }
   }
 
   function doSearch() {
     var q = $('q').value.trim();
     if (!q) return;
     var host = $('results');
+    toggleCommon(false);
     clear(host);
-    host.appendChild(el('div', 'spinner', 'Searching…'));
+
+    /* Show the local hits immediately and keep them on screen while the network
+     * call runs, rather than replacing a useful list with a spinner. */
+    var local = CommonFoods.search(q);
+    if (local.length) {
+      host.appendChild(sectionHeading(local.length + ' built-in ' +
+        (local.length === 1 ? 'food' : 'foods')));
+      local.forEach(function (f) { host.appendChild(foodRow(f)); });
+    }
+    var spinner = el('div', 'spinner', 'Looking online…');
+    host.appendChild(spinner);
 
     Foods.search(q).then(function (r) {
       state.results = r.foods;
-      renderResults(r.foods, r.errors);
+      if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
+
+      /* Drop online copies of foods already shown from the built-in list. */
+      var seen = {};
+      local.forEach(function (f) { seen[f.id] = true; });
+      var online = r.foods.filter(function (f) { return !seen[f.id]; });
+
+      if (online.length) {
+        host.appendChild(sectionHeading(online.length + ' more from online'));
+        online.forEach(function (f) { host.appendChild(foodRow(f)); });
+      }
+      renderSearchErrors(host, r.errors, local.length + online.length);
     }).catch(function () {
-      clear(host);
-      host.appendChild(el('div', 'empty', 'Search failed. Check your internet connection.'));
+      if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
+      renderSearchErrors(host, [{ code: 'GENERIC' }], local.length);
     });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * COMMON FOODS BROWSER
+   * ------------------------------------------------------------------ */
+
+  var commonCat = 'All';
+
+  function toggleCommon(visible) {
+    var card = $('commonCard');
+    if (card) card.hidden = !visible;
+  }
+
+  function renderCommonList() {
+    var host = $('commonList');
+    clear(host);
+    var foods = commonCat === 'All' ? CommonFoods.all() : CommonFoods.byCategory(commonCat);
+    foods.forEach(function (f) { host.appendChild(foodRow(f)); });
+  }
+
+  function renderCommonBrowser() {
+    var cats = ['All'].concat(CommonFoods.CATEGORIES);
+    renderChipGroup($('commonCats'), cats,
+      function (c) { return c; },
+      function (c) { return c === commonCat; },
+      function (c) { commonCat = c; renderCommonBrowser(); });
+    renderCommonList();
   }
 
   /* ------------------------------------------------------------------ *
@@ -630,10 +752,17 @@
       c.type = 'button';
       c.setAttribute('aria-pressed', String(isSelected(item)));
       c.addEventListener('click', function () {
-        onPick(item);
+        /*
+         * Mark the selection BEFORE the callback. If onPick re-renders the
+         * group (the category browser does), these nodes are replaced by fresh
+         * ones that isSelected marks correctly — whereas doing it afterwards
+         * compared the new chips against a detached `c`, matched nothing, and
+         * left every chip aria-pressed="false" with no visible selection.
+         */
         host.querySelectorAll('.chip').forEach(function (x) {
           x.setAttribute('aria-pressed', String(x === c));
         });
+        onPick(item);
       });
       host.appendChild(c);
     });
@@ -683,16 +812,36 @@
     card.appendChild(el('h2', null, food.name + (food.brand ? ' — ' + food.brand : '')));
     card.appendChild(dataQualityBadges(food));
 
+    /* Show the verbatim USDA record behind a friendly name. The short name is
+     * what makes the list usable; this is what makes it checkable. */
+    if (food.usdaDescription && food.usdaDescription !== food.name) {
+      card.appendChild(el('p', 'hint', 'USDA record: ' + food.usdaDescription));
+    }
+
     var chips = el('div', 'chips');
     chips.style.marginTop = '14px';
 
-    var options = PORTION_CHIPS.slice();
-    if (food.servingGrams) {
-      options.unshift({
+    /*
+     * Real USDA household portions first when we have them ("1 medium 136 g",
+     * "1 cup sliced 150 g"). They are measured weights for THIS food, so they
+     * beat the generic fallbacks — and "1 medium" is a far easier judgement for
+     * someone to make than estimating grams.
+     */
+    var options = [];
+    (food.portions || []).forEach(function (p) {
+      options.push({ label: p.label + ' (' + p.grams + ' g)', grams: p.grams });
+    });
+    if (!options.length && food.servingGrams) {
+      options.push({
         label: 'One serving' + (food.servingLabel ? ' (' + food.servingLabel + ')' : ''),
         grams: food.servingGrams
       });
     }
+    PORTION_CHIPS.forEach(function (p) {
+      if (!options.some(function (o) { return Math.abs(o.grams - p.grams) < 0.5; })) {
+        options.push(p);
+      }
+    });
 
     options.forEach(function (o) {
       var c = el('button', 'chip', o.label);
@@ -862,6 +1011,16 @@
     $('q').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
     });
+
+    /* Instant local matches while typing. Debounced only enough to avoid
+     * re-rendering mid-keystroke; there is no network call on this path. */
+    $('q').addEventListener('input', function () {
+      clearTimeout(searchDebounce);
+      var q = $('q').value.trim();
+      searchDebounce = setTimeout(function () { renderLocalMatches(q); }, 120);
+    });
+
+    renderCommonBrowser();
 
     $('scanBtn').addEventListener('click', openBarcode);
     $('barcodeClose').addEventListener('click', closeBarcode);
