@@ -222,14 +222,22 @@ gradients you get holding a phone over a curved package.
 ## Tests
 
 ```bash
-node test/scanner.test.js && node test/log.test.js && node test/barcode.test.js
+npm test
 ```
 
-93 tests. The scanner and barcode suites are the highest-value ones — both test
-*both directions*, because a miss and a false positive fail the user in different
+135 tests across four suites (scanner 36, log 27, barcode 30, worker 42).
+
+The scanner and barcode suites are the highest-value ones — both test *both
+directions*, because a miss and a false positive fail the user in different
 ways. The barcode suite renders known codes and degrades them the way a phone
 camera would (blur, sensor noise, lighting gradient, low contrast, missing quiet
-zone, 180° rotation) and requires an exact round-trip.
+zone, 180° rotation) and requires an exact round-trip. It also feeds 200 frames
+of random noise through and requires zero decodes: a failed scan costs a retry,
+a *wrong* scan silently logs the wrong food.
+
+The worker suite is weighted toward the two things carrying real risk — the API
+key never appearing in any response body, header, or cache key, and query
+normalisation actually collapsing equivalent searches into one cache entry.
 
 ## Layout
 
