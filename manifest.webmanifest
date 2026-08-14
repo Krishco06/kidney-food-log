@@ -1,0 +1,19 @@
+{
+  "name": "Kidney Food Log",
+  "short_name": "Kidney Log",
+  "description": "A simple food log for people on dialysis. Tracks potassium, phosphorus, sodium, protein and fluid, and reads ingredient lists for added phosphate and potassium.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7f9",
+  "theme_color": "#1a5fb4",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

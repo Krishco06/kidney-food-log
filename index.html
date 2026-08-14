@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kidney Food Log</title>
+<meta name="description" content="A simple food log for people on dialysis. Tracks potassium, phosphorus, sodium, protein and fluid, and reads ingredient lists for added phosphate and potassium.">
+<meta name="theme-color" content="#1a5fb4">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="app">
+  <div class="wrap">
+    <div class="title">Kidney Food Log</div>
+    <div class="date" id="headerDate"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============================================================ -->
+  <!-- TODAY                                                        -->
+  <!-- ============================================================ -->
+  <section class="screen" id="screen-today" aria-labelledby="todayHeading">
+    <h1 id="todayHeading" class="sr-only">Today</h1>
+
+    <div class="card">
+      <h2>Today's totals</h2>
+      <div id="totals"></div>
+    </div>
+
+    <div class="card" id="additiveCard" hidden>
+      <h2>Added phosphate and potassium today</h2>
+      <p class="hint">
+        These came from the ingredient lists of what you logged. We can tell you
+        they are there. We cannot tell you how many milligrams they add, because
+        ingredient lists do not give amounts.
+      </p>
+      <div id="additiveList"></div>
+    </div>
+
+    <div class="card">
+      <h2>What you logged</h2>
+      <div id="entries"></div>
+    </div>
+
+    <p class="disclaimer">
+      This app keeps a record of what you eat and drink. It does not set limits,
+      give you targets, or tell you what to eat. Your dialysis dietitian and
+      doctor do that, using your blood tests. Bring your log to your next visit.
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ADD FOOD                                                     -->
+  <!-- ============================================================ -->
+  <section class="screen" id="screen-add" hidden aria-labelledby="addHeading">
+    <h1 id="addHeading">Add food or drink</h1>
+
+    <div class="card">
+      <div class="field">
+        <label for="q">Search for a food</label>
+        <input type="search" id="q" placeholder="chicken breast, banana, cheese…"
+               autocomplete="off" enterkeyhint="search">
+        <p class="hint">Try plain names like "banana raw" or a brand name.</p>
+      </div>
+      <div class="row-2">
+        <button class="primary" id="searchBtn">Search</button>
+        <button id="scanBtn">Scan barcode</button>
+      </div>
+    </div>
+
+    <div class="card" id="barcodeCard" hidden>
+      <h2>Scan or type a barcode</h2>
+      <div id="scanArea"></div>
+      <div class="field" style="margin-top:14px">
+        <label for="barcodeInput">Type the numbers under the barcode</label>
+        <input type="text" id="barcodeInput" inputmode="numeric" autocomplete="off"
+               placeholder="0 12345 67890 5">
+      </div>
+      <div class="row-2">
+        <button class="primary" id="barcodeGo">Look it up</button>
+        <button id="barcodeClose">Cancel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Add a drink</h2>
+      <p class="hint">
+        Fluid adds up fast between dialysis days. Soup, gelatin, ice cream and ice
+        all count as fluid too.
+      </p>
+
+      <div class="field">
+        <label id="drinkLabel">What did you drink?</label>
+        <div class="chips" id="drinkChips" role="group" aria-labelledby="drinkLabel"></div>
+      </div>
+
+      <div class="field">
+        <label id="sizeLabel">How much?</label>
+        <div class="chips" id="sizeChips" role="group" aria-labelledby="sizeLabel"></div>
+      </div>
+
+      <button class="primary" id="addFluidBtn" style="width:100%">Add drink to today</button>
+
+      <p class="hint" style="margin-top:10px">
+        This records the amount of fluid only. To also count what is in the drink,
+        search for it or scan the can or bottle above. Dark colas usually contain
+        phosphoric acid, which your body absorbs almost completely.
+      </p>
+    </div>
+
+    <div id="results" aria-live="polite"></div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- PORTION PICKER                                               -->
+  <!-- ============================================================ -->
+  <section class="screen" id="screen-portion" hidden aria-labelledby="portionHeading">
+    <button class="link" id="portionBack">&larr; Back to search</button>
+    <h1 id="portionHeading">How much?</h1>
+    <div id="portionBody"></div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- HISTORY                                                      -->
+  <!-- ============================================================ -->
+  <section class="screen" id="screen-history" hidden aria-labelledby="historyHeading">
+    <h1 id="historyHeading">Past days</h1>
+    <div class="card">
+      <h2>Share with your care team</h2>
+      <p>
+        Download your log as a spreadsheet file. Every US dialysis center has a
+        kidney dietitian. This file gives them your real week instead of what you
+        can remember in the chair.
+      </p>
+      <p class="hint">
+        A question mark means we had no data for that nutrient. It does not mean zero.
+      </p>
+      <button class="primary" id="exportBtn">Download my food log</button>
+    </div>
+    <div id="historyList"></div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SETTINGS / ABOUT                                             -->
+  <!-- ============================================================ -->
+  <section class="screen" id="screen-more" hidden aria-labelledby="moreHeading">
+    <h1 id="moreHeading">Settings and info</h1>
+
+    <div class="card">
+      <h2>Units</h2>
+      <div class="field">
+        <label for="unitSel">Show potassium and phosphorus in</label>
+        <select id="unitSel">
+          <option value="mg">Milligrams (mg)</option>
+          <option value="mmol">Millimoles (mmol)</option>
+          <option value="mEq">Milliequivalents (mEq)</option>
+        </select>
+        <p class="hint">
+          Different clinics use different units. 1 mmol of potassium = 1 mEq = 39 mg.
+          Phosphorus has no mEq value, so it stays in mg.
+        </p>
+      </div>
+      <div class="field">
+        <label for="fluidSel">Show fluid in</label>
+        <select id="fluidSel">
+          <option value="ml">Milliliters (mL)</option>
+          <option value="oz">Fluid ounces (fl oz)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Why some foods say "no data"</h2>
+      <p>
+        In the United States, food companies are <strong>not required</strong> to
+        put phosphorus on the label. Potassium was only required starting in 2020.
+      </p>
+      <p>
+        So most packaged foods have no phosphorus number anywhere. One study of
+        239,089 packaged foods found phosphorus listed on only
+        <strong>1.45%</strong> of them, and potassium on only <strong>5.7%</strong>.
+      </p>
+      <p>
+        Other apps hide this by counting a missing number as zero. That makes your
+        daily total look much lower than it really is. This app shows you what is
+        missing instead.
+      </p>
+      <details>
+        <summary>What we do instead</summary>
+        <p>
+          We read the ingredient list, which is always printed. Added phosphate is
+          absorbed by your body almost completely (about 90% or more), while the
+          phosphorus naturally in food is absorbed at about 40&ndash;60%. So knowing an
+          added phosphate is present is useful even without a number.
+        </p>
+        <p>
+          The common advice is to look for "PHOS" in the ingredients. That misses the
+          two most common ones: lecithin and modified food starch. This app checks
+          for those too, plus potassium salts added to low-sodium foods.
+        </p>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>Food data source (optional)</h2>
+      <p class="hint">
+        Whole-food numbers come from the USDA. The app works without a key, but the
+        free shared key is slow and limited. Your own key is free from
+        <strong>api.data.gov</strong> and takes a minute to get.
+      </p>
+      <div class="field">
+        <label for="usdaKeyInput">Your USDA API key</label>
+        <input type="text" id="usdaKeyInput" autocomplete="off" placeholder="Leave blank to use the shared key">
+      </div>
+      <button class="primary" id="saveKeyBtn">Save key</button>
+      <p class="hint" id="keyStatus" role="status"></p>
+    </div>
+
+    <div class="card">
+      <h2>Your privacy</h2>
+      <p>
+        Your food log is stored only on this device. It is not sent to us or to
+        anyone else. We have no account and no server.
+      </p>
+      <p class="hint">
+        When you search for a food, the search words go to the USDA and Open Food
+        Facts to look it up. Nothing about you is sent with them.
+      </p>
+      <button class="danger" id="clearBtn">Delete all my data</button>
+    </div>
+
+    <div class="card">
+      <h2>Important</h2>
+      <p>
+        This app is a notebook. It is <strong>not</strong> a medical device and it
+        does not give medical advice.
+      </p>
+      <p>
+        It will never tell you your limit, warn you that you have had too much, or
+        guess your blood test results. Only your care team can do that, because
+        only they know your labs, your dialysis, and your medicines.
+      </p>
+      <p>
+        Food data can be wrong or missing. Always check with your dietitian or
+        doctor before changing what you eat.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabs" role="tablist" aria-label="Main">
+  <button data-screen="today"   aria-current="page"><span class="ico" aria-hidden="true">&#128203;</span>Today</button>
+  <button data-screen="add"><span class="ico" aria-hidden="true">&#10133;</span>Add</button>
+  <button data-screen="history"><span class="ico" aria-hidden="true">&#128197;</span>Days</button>
+  <button data-screen="more"><span class="ico" aria-hidden="true">&#9881;</span>More</button>
+</nav>
+
+<script src="js/additives.js"></script>
+<script src="js/scanner.js"></script>
+<script src="js/barcode.js"></script>
+<script src="js/units.js"></script>
+<script src="js/foods.js"></script>
+<script src="js/log.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
