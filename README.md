@@ -71,7 +71,7 @@ the exact false precision this app exists to reject.
 
 | Use | Source | Why |
 |---|---|---|
-| **Built-in library** | **USDA SR Legacy, bundled (`js/commonfoods.js`)** | **586 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
+| **Built-in library** | **USDA SR Legacy, bundled (`js/commonfoods.js`)** | **789 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
 | Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
@@ -95,7 +95,7 @@ hours. A food log that cannot record a banana without a round trip is not usable
 and while the proxy was undeployed, searching a brand returned nothing at all,
 which reads as a broken app rather than a missing connection.
 
-So 586 everyday foods ship with the app. They appear **as you type**, with no
+So 789 everyday foods ship with the app. They appear **as you type**, with no
 network call, and are browsable by category. SR Legacy is the source rather than
 Branded because it is laboratory-analysed: every entry has a real measured
 phosphorus *and* potassium value — exactly what 98.55% of branded records lack.
@@ -105,6 +105,11 @@ The list deliberately spans the full potassium and phosphorus range — potatoes
 bananas, chocolate, processed cheese — rather than being skewed "kidney-friendly".
 This is a logbook: a log you cannot record your actual dinner in is useless, and
 what the user ate is not the app's judgment to make.
+
+The browse list renders **60 rows at a time** behind a "Show all" tap. At 789
+foods a full render builds roughly 3,000 DOM nodes, which measured ~40 ms on a
+desktop and would be several times that on the phones this audience actually
+uses. Search is the real way in; browsing is for orientation.
 
 Regenerate with `tools/gen-common.js` against the USDA SR Legacy bulk download
 (no API key needed; needs `node --max-old-space-size=6144`, the JSON is 210 MB):
@@ -116,7 +121,7 @@ node --max-old-space-size=6144 tools/gen-common.js /path/to/sr_legacy.json
 Entries are matched by regex against the shortest matching USDA description,
 which is fast but silently wrong sometimes — and **a wrong record under a
 plausible name is the worst defect this file can carry**, because nobody can
-eyeball 586 bindings. So the generator warns on three patterns, each modelled
+eyeball 789 bindings. So the generator warns on three patterns, each modelled
 on a real bug found by reading output rather than by anything crashing:
 
 | Guard | The bug it was written for |
@@ -152,12 +157,14 @@ occasionally absurd. Real suggestions it made that were rejected on review:
 
 | Wanted | Probe suggested | |
 |---|---|---|
+| Tamari | *Tamarinds, raw* | a fruit |
 | Sweet and sour chicken | *Salad dressing, sweet and sour* | a dressing |
 | Nacho cheese sauce | *Snacks, tortilla chips, nacho cheese* | chips |
 | Champagne | *GEROLSTEINER … sparkling mineral water* | water |
 | Agave syrup | *Agave, raw (Southwest)* | the plant |
 | Canned clams | *clam, canned, liquid* | clam juice |
-| Beef stroganoff | *Soup, beef stroganoff, canned* | a soup |
+| Nutritional yeast | *yeast, baker's, active dry* | a different yeast |
+| Chicken chow mein | *Noodles, chinese, chow mein* | the noodles |
 
 The probe also favours "with salt" preparations when both exist, because those
 descriptions are shorter. Sodium is one of the five tracked nutrients, so greens
@@ -302,7 +309,7 @@ gradients you get holding a phone over a curved package.
 npm test
 ```
 
-157 tests across five suites (scanner 36, log 27, barcode 30, common foods 22, worker 42).
+158 tests across five suites (scanner 36, log 27, barcode 30, common foods 23, worker 42).
 
 The scanner and barcode suites are the highest-value ones — both test *both
 directions*, because a miss and a false positive fail the user in different
@@ -329,8 +336,8 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-js/commonfoods.js       GENERATED: 586 offline foods from USDA SR Legacy (82 KB)
-test/                   157 tests (incl. worker/test)
+js/commonfoods.js       GENERATED: 789 offline foods from USDA SR Legacy (108 KB, 33 KB gzipped)
+test/                   158 tests (incl. worker/test)
 ```
 
 ---

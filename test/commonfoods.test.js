@@ -5,7 +5,7 @@
  *
  * This is shipped DATA, not logic, and the user acts on it directly, so the
  * tests are mostly invariants about the data itself. The failure that matters
- * is a plausible-looking wrong number: nobody can eyeball 586 potassium values,
+ * is a plausible-looking wrong number: nobody can eyeball 789 potassium values,
  * so the guards have to.
  */
 
@@ -30,7 +30,7 @@ var ALL = C.all();
  * ------------------------------------------------------------------ */
 
 test('library is non-trivial and every row is well formed', function () {
-  assert(C.count >= 550, 'expected a useful library, got ' + C.count);
+  assert(C.count >= 750, 'expected a useful library, got ' + C.count);
   assert(ALL.length === C.count);
   ALL.forEach(function (f) {
     assert(typeof f.name === 'string' && f.name.length > 1, 'bad name: ' + f.name);
@@ -292,8 +292,28 @@ test('every food carries its verbatim USDA record for checking', function () {
 });
 
 test('the library is small enough to ship in an offline PWA', function () {
+  /*
+   * Two different budgets, and the raw size is the one that actually binds.
+   * Over the wire this file gzips to roughly a third (107 KB -> 33 KB), and
+   * GitHub Pages serves it compressed, so transfer is not the constraint. What
+   * costs something on an old phone is parsing it on every cold start, which
+   * scales with the raw bytes.
+   */
   var bytes = require('fs').statSync(require.resolve('../js/commonfoods.js')).size;
-  assert(bytes < 120 * 1024, 'commonfoods.js is ' + Math.round(bytes / 1024) + ' KB');
+  assert(bytes < 200 * 1024,
+    'commonfoods.js is ' + Math.round(bytes / 1024) + ' KB raw; past ~200 KB the ' +
+    'cold-start parse cost needs measuring on a low-end device before growing further');
+});
+
+test('parsing the whole library is fast enough for a cold start', function () {
+  // The real guard behind the size limit. Re-require with a busted cache so
+  // this measures an actual parse, not a memoised module lookup.
+  var path = require.resolve('../js/commonfoods.js');
+  delete require.cache[path];
+  var t0 = Date.now();
+  require('../js/commonfoods.js');
+  var ms = Date.now() - t0;
+  assert(ms < 250, 'library took ' + ms + ' ms to parse');
 });
 
 /* ------------------------------------------------------------------ */

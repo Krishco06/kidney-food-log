@@ -521,11 +521,36 @@
     if (card) card.hidden = !visible;
   }
 
+  /*
+   * The browse list is capped on first paint.
+   *
+   * At 789 foods, rendering every row builds roughly 3,000 DOM nodes, which
+   * measured ~40 ms on a desktop and would be several times that on the old
+   * phones this audience actually uses. Nobody scrolls 789 rows anyway — the
+   * search box above is the real way in — so show a screenful and put the rest
+   * behind one tap.
+   */
+  var BROWSE_LIMIT = 60;
+  var commonShowAll = false;
+
   function renderCommonList() {
     var host = $('commonList');
     clear(host);
     var foods = commonCat === 'All' ? CommonFoods.all() : CommonFoods.byCategory(commonCat);
-    foods.forEach(function (f) { host.appendChild(foodRow(f)); });
+    var shown = commonShowAll ? foods : foods.slice(0, BROWSE_LIMIT);
+    shown.forEach(function (f) { host.appendChild(foodRow(f)); });
+
+    if (foods.length > shown.length) {
+      var more = el('button', 'link');
+      more.style.width = '100%';
+      more.textContent = 'Show all ' + foods.length +
+        (commonCat === 'All' ? ' foods' : ' in ' + commonCat);
+      more.addEventListener('click', function () {
+        commonShowAll = true;
+        renderCommonList();
+      });
+      host.appendChild(more);
+    }
   }
 
   function renderCommonBrowser() {
@@ -533,7 +558,7 @@
     renderChipGroup($('commonCats'), cats,
       function (c) { return c; },
       function (c) { return c === commonCat; },
-      function (c) { commonCat = c; renderCommonBrowser(); });
+      function (c) { commonCat = c; commonShowAll = false; renderCommonBrowser(); });
     renderCommonList();
   }
 
