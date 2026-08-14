@@ -71,7 +71,7 @@ the exact false precision this app exists to reject.
 
 | Use | Source | Why |
 |---|---|---|
-| **Built-in library** | **USDA SR Legacy, bundled (`js/commonfoods.js`)** | **418 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
+| **Built-in library** | **USDA SR Legacy, bundled (`js/commonfoods.js`)** | **586 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
 | Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
@@ -95,7 +95,7 @@ hours. A food log that cannot record a banana without a round trip is not usable
 and while the proxy was undeployed, searching a brand returned nothing at all,
 which reads as a broken app rather than a missing connection.
 
-So 418 everyday foods ship with the app. They appear **as you type**, with no
+So 586 everyday foods ship with the app. They appear **as you type**, with no
 network call, and are browsable by category. SR Legacy is the source rather than
 Branded because it is laboratory-analysed: every entry has a real measured
 phosphorus *and* potassium value — exactly what 98.55% of branded records lack.
@@ -116,7 +116,7 @@ node --max-old-space-size=6144 tools/gen-common.js /path/to/sr_legacy.json
 Entries are matched by regex against the shortest matching USDA description,
 which is fast but silently wrong sometimes — and **a wrong record under a
 plausible name is the worst defect this file can carry**, because nobody can
-eyeball 418 bindings. So the generator warns on three patterns, each modelled
+eyeball 586 bindings. So the generator warns on three patterns, each modelled
 on a real bug found by reading output rather than by anything crashing:
 
 | Guard | The bug it was written for |
@@ -135,6 +135,33 @@ picker, so any number is checkable against the source. Foods with no
 complete-panel record in SR Legacy were dropped rather than bound to something
 approximate — that removed brownies, cheesecake, buttermilk, lima beans and a
 dozen others.
+
+**Adding foods.** Writing patterns blind wastes a round on ones that match
+nothing (42 of them, once). `tools/suggest-foods.js` probes the dataset first
+and emits ready-to-paste lines anchored to descriptions that are known to exist
+with a full panel:
+
+```bash
+node --max-old-space-size=6144 tools/suggest-foods.js /path/to/sr_legacy.json
+```
+
+It skips fdcIds already in the library and filters out brand-shouted and
+hyper-specific cuts. **Read its output before pasting** — the probe optimises
+for "shortest description that matches", which is right most of the time and
+occasionally absurd. Real suggestions it made that were rejected on review:
+
+| Wanted | Probe suggested | |
+|---|---|---|
+| Sweet and sour chicken | *Salad dressing, sweet and sour* | a dressing |
+| Nacho cheese sauce | *Snacks, tortilla chips, nacho cheese* | chips |
+| Champagne | *GEROLSTEINER … sparkling mineral water* | water |
+| Agave syrup | *Agave, raw (Southwest)* | the plant |
+| Canned clams | *clam, canned, liquid* | clam juice |
+| Beef stroganoff | *Soup, beef stroganoff, canned* | a soup |
+
+The probe also favours "with salt" preparations when both exist, because those
+descriptions are shorter. Sodium is one of the five tracked nutrients, so greens
+and beans are repointed at the unsalted record by hand.
 
 ### USDA API key and the proxy Worker
 
@@ -302,7 +329,7 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-js/commonfoods.js       GENERATED: 418 offline foods from USDA SR Legacy (62 KB)
+js/commonfoods.js       GENERATED: 586 offline foods from USDA SR Legacy (82 KB)
 test/                   157 tests (incl. worker/test)
 ```
 
