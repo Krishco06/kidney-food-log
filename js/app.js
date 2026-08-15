@@ -21,7 +21,37 @@
   var Units = window.RenalUnits;
   var Foods = window.RenalFoods;
   var Log = window.RenalLog;
-  var CommonFoods = window.RenalCommonFoods;
+  /*
+   * The built-in food library is loaded on demand, not at startup.
+   *
+   * It is by far the largest asset in the app, and the Today screen — the one
+   * that opens on launch — never touches it. Loading it eagerly made cold start
+   * scale with the size of the library, which is the wrong thing to pay for on
+   * an old phone. Fetching it when the Add screen is first opened decouples the
+   * two, so the library can keep growing without slowing the app's first paint.
+   *
+   * The service worker precaches it, so this is a cache read offline, not a
+   * network round trip.
+   */
+  var CommonFoods = null;
+  var commonFoodsPromise = null;
+
+  function loadCommonFoods() {
+    if (commonFoodsPromise) return commonFoodsPromise;
+    commonFoodsPromise = new Promise(function (resolve, reject) {
+      if (window.RenalCommonFoods) { resolve(window.RenalCommonFoods); return; }
+      var s = document.createElement('script');
+      s.src = 'js/commonfoods.js';
+      s.async = true;
+      s.onload = function () {
+        if (window.RenalCommonFoods) resolve(window.RenalCommonFoods);
+        else reject(new Error('commonfoods loaded but did not register'));
+      };
+      s.onerror = function () { reject(new Error('could not load commonfoods.js')); };
+      document.head.appendChild(s);
+    }).then(function (lib) { CommonFoods = lib; return lib; });
+    return commonFoodsPromise;
+  }
 
   var state = {
     screen: 'today',
@@ -77,6 +107,34 @@
     window.scrollTo(0, 0);
     if (name === 'today') renderToday();
     if (name === 'history') renderHistory();
+    /* First visit to Add pulls in the food library. Everything on this screen
+     * that needs it waits on the same promise, so it is fetched once. */
+    if (name === 'add') ensureFoodsReady();
+  }
+
+  /*
+   * Load the library if it is not in memory yet, and keep the Add screen honest
+   * about it. Offline this resolves from the service worker cache in a few
+   * milliseconds; the placeholder only ever shows on a genuinely slow first load.
+   */
+  function ensureFoodsReady() {
+    if (CommonFoods) return Promise.resolve(CommonFoods);
+
+    var list = $('commonList');
+    if (list && !list.firstChild) {
+      list.appendChild(el('div', 'spinner', 'Loading foods…'));
+    }
+    return loadCommonFoods().then(function (lib) {
+      renderCommonBrowser();
+      return lib;
+    }).catch(function (err) {
+      if (list) {
+        clear(list);
+        list.appendChild(el('div', 'empty',
+          'Could not load the built-in food list. Search and barcode scanning still work.'));
+      }
+      throw err;
+    });
   }
 
   /* ------------------------------------------------------------------ *
@@ -462,13 +520,29 @@
    */
   var LOCAL_RESULT_LIMIT = 25;
 
+  /* Safe accessor: the library loads on demand, so callers must cope with it
+   * not being there yet (or having failed) rather than throwing. */
+  function localSearch(q) {
+    return CommonFoods ? CommonFoods.search(q) : [];
+  }
+
   /* Runs on every keystroke against the local rows. No network, no spinner. */
   function renderLocalMatches(q) {
     var host = $('results');
     clear(host);
     if (q.length < 2) { toggleCommon(true); return; }
 
-    var local = CommonFoods.search(q);
+    /* Typing before the library has arrived: wait for it, then draw. Only
+     * possible in the first moments after opening Add. */
+    if (!CommonFoods) {
+      host.appendChild(el('div', 'spinner', 'Loading foods…'));
+      ensureFoodsReady().then(function () {
+        if ($('q').value.trim() === q) renderLocalMatches(q);
+      }).catch(function () { clear(host); });
+      return;
+    }
+
+    var local = localSearch(q);
     toggleCommon(false);
 
     if (local.length) {
@@ -493,8 +567,9 @@
     clear(host);
 
     /* Show the local hits immediately and keep them on screen while the network
-     * call runs, rather than replacing a useful list with a spinner. */
-    var local = CommonFoods.search(q);
+     * call runs, rather than replacing a useful list with a spinner. Empty if
+     * the library has not loaded yet — the online search still proceeds. */
+    var local = localSearch(q);
     if (local.length) {
       host.appendChild(sectionHeading(local.length + ' built-in ' +
         (local.length === 1 ? 'food' : 'foods')));
@@ -548,6 +623,7 @@
 
   function renderCommonList() {
     var host = $('commonList');
+    if (!CommonFoods) return; // ensureFoodsReady() will call back
     clear(host);
     var foods = commonCat === 'All' ? CommonFoods.all() : CommonFoods.byCategory(commonCat);
     var shown = commonShowAll ? foods : foods.slice(0, BROWSE_LIMIT);
@@ -567,6 +643,7 @@
   }
 
   function renderCommonBrowser() {
+    if (!CommonFoods) return; // ensureFoodsReady() will call back once loaded
     var cats = ['All'].concat(CommonFoods.CATEGORIES);
     renderChipGroup($('commonCats'), cats,
       function (c) { return c; },
@@ -1058,7 +1135,8 @@
       searchDebounce = setTimeout(function () { renderLocalMatches(q); }, 120);
     });
 
-    renderCommonBrowser();
+    /* Deliberately not loaded at init — show() pulls it in on the first visit
+     * to Add, so launching straight to Today costs nothing. */
 
     $('scanBtn').addEventListener('click', openBarcode);
     $('barcodeClose').addEventListener('click', closeBarcode);

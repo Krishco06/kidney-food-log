@@ -71,7 +71,7 @@ the exact false precision this app exists to reject.
 
 | Use | Source | Why |
 |---|---|---|
-| **Built-in library** | **USDA SR Legacy + FNDDS, bundled (`js/commonfoods.js`)** | **1,635 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
+| **Built-in library** | **USDA SR Legacy + FNDDS, bundled (`js/commonfoods.js`)** | **1,839 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
 | Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
@@ -95,7 +95,7 @@ hours. A food log that cannot record a banana without a round trip is not usable
 and while the proxy was undeployed, searching a brand returned nothing at all,
 which reads as a broken app rather than a missing connection.
 
-So 1,635 everyday foods ship with the app. They appear **as you type**, with no
+So 1,839 everyday foods ship with the app. They appear **as you type**, with no
 network call, and are browsable by category. Branded is not the source, because
 it is label-derived: every entry here has a real measured phosphorus *and*
 potassium value, which is exactly what 98.55% of branded records lack. Records
@@ -106,7 +106,7 @@ with an incomplete panel were dropped rather than shipped with gaps.
 | Dataset | Rows | What it is | Why both |
 |---|---|---|---|
 | **SR Legacy** | 789 | Laboratory-analysed whole foods | Bananas, chicken breast, cheddar — the ingredients |
-| **FNDDS** | 846 | The "as consumed" survey database + packaged goods | Shepherd's pie, gyros, sushi, cereals, chips, condiments |
+| **FNDDS** | 1,050 | The "as consumed" survey database + packaged goods | Shepherd's pie, gyros, sushi, cereals, chips, condiments |
 
 SR Legacy is an ingredient database. It has ground beef and flour but no
 shepherd's pie, which is why three expansions in a row failed to find lasagna,
@@ -137,7 +137,7 @@ growth broke something measurable:
   every row builds thousands of DOM nodes; at 789 foods that already took a
   category switch from ~1 ms to ~40 ms on a desktop, and far worse on the
   phones this audience uses.
-- Type-ahead renders **25 matches** and reports the true total. At 1,635 foods a
+- Type-ahead renders **25 matches** and reports the true total. At 1,839 foods a
   short prefix matches dozens — "chic" hits 55 — and a wall of rows re-rendered
   on every keystroke is not scannable. The hint tells you to type one more
   letter, which is the right move anyway.
@@ -155,10 +155,19 @@ the bytes went found three kinds of pure repetition:
 | 11 category strings written out for every row | interned into `CATEGORIES` |
 | 36% of rows repeated the display name as their USDA description | stored as `0`, falls back to the name |
 
-That returned ~35 KB losslessly and dropped the cost to **106 bytes per food**,
-so 1,635 foods now fit in 170 KB and parse in 7 ms. A test decodes every row
-and asserts no portion label survives as a raw index, because a decoding slip
-would silently mislabel every portion in the app.
+That returned ~35 KB losslessly and dropped the cost to **102 bytes per food**.
+A test decodes every row and asserts no portion label survives as a raw index,
+because a decoding slip would silently mislabel every portion in the app.
+
+**The library is loaded on demand, not at startup** — and that is what removed
+the size ceiling rather than deferring it. It is the largest asset in the app,
+and the Today screen, the one that opens on launch, never touches it. `app.js`
+fetches it the first time the Add screen is opened, so cold start no longer
+scales with the library at all; what its size costs is a delay on one
+deliberate tap, and offline that is a service-worker cache read (~190 ms
+measured, uncached). A test asserts `index.html` has no script tag for it and
+that `sw.js` still precaches it, because re-adding the tag would silently put
+the largest asset back on the launch path.
 
 Regenerate with `tools/gen-common.js` against the two USDA bulk downloads (no
 API key needed; needs `node --max-old-space-size=6144`, the SR JSON is 210 MB):
@@ -170,7 +179,7 @@ node --max-old-space-size=6144 tools/gen-common.js /path/to/sr_legacy.json /path
 Entries are matched by regex against the shortest matching USDA description,
 which is fast but silently wrong sometimes — and **a wrong record under a
 plausible name is the worst defect this file can carry**, because nobody can
-eyeball 1,635 bindings. So the generator warns on three patterns, each modelled
+eyeball 1,839 bindings. So the generator warns on three patterns, each modelled
 on a real bug found by reading output rather than by anything crashing:
 
 | Guard | The bug it was written for |
@@ -404,7 +413,8 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-js/commonfoods.js       GENERATED: 1,635 offline foods, SR Legacy + FNDDS (170 KB, 55 KB gzipped)
+js/commonfoods.js       GENERATED: 1,839 offline foods, SR Legacy + FNDDS (188 KB, 60 KB gzipped)
+                        loaded on demand, NOT at startup
 test/                   160 tests (incl. worker/test)
 ```
 

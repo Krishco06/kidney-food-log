@@ -284,7 +284,13 @@
 </nav>
 
 <script src="js/additives.js"></script>
-<script src="js/commonfoods.js"></script>
+<!--
+  js/commonfoods.js is deliberately NOT loaded here. It is the largest asset in
+  the app and the Today screen — the one that opens on launch — does not use it
+  at all. app.js fetches it the first time the Add screen is opened, which keeps
+  cold start independent of how large the library grows. The service worker
+  still precaches it, so offline is unaffected.
+-->
 <script src="js/scanner.js"></script>
 <script src="js/barcode.js"></script>
 <script src="js/units.js"></script>

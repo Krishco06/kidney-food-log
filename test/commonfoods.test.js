@@ -5,7 +5,7 @@
  *
  * This is shipped DATA, not logic, and the user acts on it directly, so the
  * tests are mostly invariants about the data itself. The failure that matters
- * is a plausible-looking wrong number: nobody can eyeball 1,635 potassium values,
+ * is a plausible-looking wrong number: nobody can eyeball 1,839 potassium values,
  * so the guards have to.
  */
 
@@ -30,7 +30,7 @@ var ALL = C.all();
  * ------------------------------------------------------------------ */
 
 test('library is non-trivial and every row is well formed', function () {
-  assert(C.count >= 1550, 'expected a useful library, got ' + C.count);
+  assert(C.count >= 1750, 'expected a useful library, got ' + C.count);
   assert(ALL.length === C.count);
   ALL.forEach(function (f) {
     assert(typeof f.name === 'string' && f.name.length > 1, 'bad name: ' + f.name);
@@ -363,19 +363,50 @@ test('every food carries its verbatim USDA record for checking', function () {
 
 test('the library is small enough to ship in an offline PWA', function () {
   /*
-   * Two different budgets, and the raw size is the one that actually binds.
-   * Over the wire this file gzips to roughly a third (107 KB -> 33 KB), and
-   * GitHub Pages serves it compressed, so transfer is not the constraint. What
-   * costs something on an old phone is parsing it on every cold start, which
-   * scales with the raw bytes.
+   * This budget was rewritten when the library moved to on-demand loading.
+   *
+   * It used to guard COLD START: the file was parsed on every launch, so its
+   * size was paid by everyone including people who only wanted to look at
+   * yesterday's total. app.js now fetches it the first time the Add screen is
+   * opened, so what it costs is the delay on that one deliberate tap — and
+   * offline that is a service-worker cache read, not a download.
+   *
+   * The ceiling is therefore much higher than before, but it is not infinite:
+   * a slow phone still has to parse this before the food list appears.
    */
   var bytes = require('fs').statSync(require.resolve('../js/commonfoods.js')).size;
-  assert(bytes < 200 * 1024,
-    'commonfoods.js is ' + Math.round(bytes / 1024) + ' KB raw; past ~200 KB the ' +
-    'cold-start parse cost needs measuring on a low-end device before growing further');
+  assert(bytes < 400 * 1024,
+    'commonfoods.js is ' + Math.round(bytes / 1024) + ' KB raw; past ~400 KB the ' +
+    'delay opening the Add screen needs measuring on a low-end device');
 });
 
-test('parsing the whole library is fast enough for a cold start', function () {
+test('the library is NOT loaded at startup', function () {
+  /*
+   * The contract that makes the size limit generous: index.html must not have
+   * a script tag for commonfoods.js, because app.js fetches it on the first
+   * visit to the Add screen. Re-adding the tag would silently put the largest
+   * asset back on the cold-start path, where everyone pays for it including
+   * people who only opened the app to read yesterday's total.
+   *
+   * The service worker must still precache it, or the on-demand fetch becomes
+   * a network round trip and the app stops working offline.
+   */
+  var fs = require('fs');
+  var path = require('path');
+  var html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  var scriptTags = html.match(/<script[^>]*src=["'][^"']*commonfoods[^"']*["'][^>]*>/gi) || [];
+  assert(scriptTags.length === 0,
+    'index.html loads commonfoods.js eagerly: ' + scriptTags.join(' '));
+
+  var app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+  assert(/js\/commonfoods\.js/.test(app), 'app.js no longer fetches the library on demand');
+
+  var sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+  assert(/js\/commonfoods\.js/.test(sw),
+    'sw.js must precache the library, or on-demand loading breaks offline');
+});
+
+test('parsing the whole library is fast enough to open the Add screen', function () {
   // The real guard behind the size limit. Re-require with a busted cache so
   // this measures an actual parse, not a memoised module lookup.
   var path = require.resolve('../js/commonfoods.js');
