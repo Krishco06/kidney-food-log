@@ -11,7 +11,7 @@
  */
 
 /* Bump on every shell change so returning users pick up the new bundle. */
-var CACHE = 'kidney-food-log-v5';
+var CACHE = 'kidney-food-log-v6';
 
 var SHELL = [
   './',
