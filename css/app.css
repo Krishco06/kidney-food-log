@@ -85,7 +85,23 @@ h2 { font-size: 1.25rem; }
 h3 { font-size: 1.05rem; }
 p { margin: 0 0 12px; }
 
+/*
+ * Width.
+ *
+ * 680px is the right measure for a paragraph, and it was the whole app's width
+ * for a long time — which meant a desktop browser showed a phone-shaped ribbon
+ * with a field of grey either side, and a search that matched 25 foods made you
+ * scroll past 24 of them one at a time.
+ *
+ * So the reading column stays narrow and the LISTS get the extra room: see
+ * .grid-list and .cols below. Nothing here shrinks the mobile layout, which is
+ * still the one that matters most.
+ */
 .wrap { max-width: 680px; margin: 0 auto; padding: 16px; }
+
+@media (min-width: 760px)  { .wrap { max-width: 860px; } }
+@media (min-width: 1000px) { .wrap { max-width: 1120px; padding: 20px 24px; } }
+@media (min-width: 1500px) { .wrap { max-width: 1380px; } }
 
 /* ---------------------------------------------------------------- *
  * Header
@@ -228,6 +244,105 @@ header.app .date { color: var(--text-soft); font-size: 0.9rem; }
 .result:hover, .result:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
 .result .name { font-weight: 600; }
 .result .meta { font-size: 0.9rem; color: var(--text-soft); margin-top: 2px; }
+
+/* ---------------------------------------------------------------- *
+ * Nutrient facts on a row
+ *
+ * Every food row now carries its own numbers, because choosing between two
+ * foods is the moment the numbers matter and it was the one moment the app
+ * did not show them — you had to open a food to find out it was 800 mg of
+ * potassium, then come back and open the next one.
+ *
+ * "?" is a first-class value here, exactly as it is in the daily total. A
+ * dash would read as "none".
+ * ---------------------------------------------------------------- */
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+.facts .per { color: var(--text-soft); width: 100%; margin-bottom: 2px; }
+.facts .fact { display: inline-flex; align-items: baseline; gap: 5px; }
+.facts .k { color: var(--text-soft); }
+.facts .v { font-weight: 700; }
+.facts .v.unknown { color: var(--unknown); }
+
+/* Which foods are missing data for this nutrient — the names behind the
+ * coverage sentence, so "3 items have no phosphorus data" is checkable. */
+.missing { margin: 6px 0 0; }
+.missing > summary {
+  font-size: 0.9rem; font-weight: 600; color: var(--unknown);
+  min-height: 0; padding: 4px 0;
+}
+.missing ul { margin: 4px 0 0; padding-left: 22px; font-size: 0.9rem; color: var(--text-soft); }
+
+/* ---------------------------------------------------------------- *
+ * Wide screens
+ *
+ * Two changes, both about spending width on things that are actually lists:
+ *   .grid-list  — search results and the food browser flow into columns
+ *   .cols       — Today puts totals beside the log instead of above it
+ * ---------------------------------------------------------------- */
+
+@media (min-width: 760px) {
+  .grid-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+  /* Headings, notices and the "show all" button span the full width — they
+   * describe the list, they are not items in it. */
+  .grid-list > .section-head,
+  .grid-list > .notice,
+  .grid-list > .empty,
+  .grid-list > .spinner,
+  .grid-list > button.link { grid-column: 1 / -1; }
+  .grid-list > .result { margin-bottom: 0; height: 100%; }
+}
+
+@media (min-width: 1000px) {
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 20px;
+    align-items: start;
+  }
+  /* The totals are the reason to open the app, so they stay in view while a
+   * long log scrolls past beside them. */
+  .cols > .col-main { position: sticky; top: 76px; }
+
+  /* Tabs become a left rail. A full-width bar pinned to the bottom of a
+   * 27-inch monitor is a phone control that wandered onto a desktop. */
+  body { padding-left: 232px; padding-bottom: 24px; }
+  nav.tabs {
+    top: 0; bottom: 0; right: auto;
+    width: 232px;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 16px 12px;
+    border-top: 0;
+    border-right: 1px solid var(--border);
+  }
+  nav.tabs button {
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 16px;
+    min-height: 52px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+  nav.tabs button[aria-current="page"] { background: var(--accent-soft); }
+}
 
 /* Group heading inside the results list ("12 built-in foods"). */
 .section-head { margin: 18px 0 10px; }

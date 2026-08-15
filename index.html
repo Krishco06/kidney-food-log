@@ -26,24 +26,35 @@
   <section class="screen" id="screen-today" aria-labelledby="todayHeading">
     <h1 id="todayHeading" class="sr-only">Today</h1>
 
-    <div class="card">
-      <h2>Today's totals</h2>
-      <div id="totals"></div>
-    </div>
+    <!--
+      Two columns on a wide screen, one on a phone. Totals lead in both cases:
+      on a phone because they come first in the DOM, on a desktop because the
+      left column is sticky.
+    -->
+    <div class="cols">
+      <div class="col-main">
+        <div class="card">
+          <h2>Today's totals</h2>
+          <div id="totals"></div>
+        </div>
+      </div>
 
-    <div class="card" id="additiveCard" hidden>
-      <h2>Added phosphate and potassium today</h2>
-      <p class="hint">
-        These came from the ingredient lists of what you logged. We can tell you
-        they are there. We cannot tell you how many milligrams they add, because
-        ingredient lists do not give amounts.
-      </p>
-      <div id="additiveList"></div>
-    </div>
+      <div class="col-side">
+        <div class="card" id="additiveCard" hidden>
+          <h2>Added phosphate and potassium today</h2>
+          <p class="hint">
+            These came from the ingredient lists of what you logged. We can tell you
+            they are there. We cannot tell you how many milligrams they add, because
+            ingredient lists do not give amounts.
+          </p>
+          <div id="additiveList"></div>
+        </div>
 
-    <div class="card">
-      <h2>What you logged</h2>
-      <div id="entries"></div>
+        <div class="card">
+          <h2>What you logged</h2>
+          <div id="entries"></div>
+        </div>
+      </div>
     </div>
 
     <p class="disclaimer">
@@ -94,7 +105,7 @@
       drink card, which meant searching pushed your results off-screen behind a
       block of controls you were not using.
     -->
-    <div id="results" aria-live="polite"></div>
+    <div id="results" class="grid-list" aria-live="polite"></div>
 
     <!--
       The offline library. Needs no network, no key and no proxy, so it is the
@@ -108,7 +119,7 @@
         real phosphorus and potassium number measured in a lab.
       </p>
       <div class="chips" id="commonCats" role="group" aria-label="Food groups"></div>
-      <div id="commonList"></div>
+      <div id="commonList" class="grid-list"></div>
     </div>
 
     <details class="card" id="drinkCard">

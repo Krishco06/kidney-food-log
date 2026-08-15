@@ -200,6 +200,27 @@
       var note = el('div', 'coverage-note' + (stat.complete ? '' : ' warn'),
         Log.coverageNote(stat, COVERAGE_LABELS[key]));
       cov.appendChild(note);
+
+      /*
+       * Name the foods behind the sentence. "3 items have no phosphorus data"
+       * is honest but not actionable; knowing the three are the protein bar,
+       * the deli turkey and the frozen dinner tells you where the gap is, and
+       * lets someone check the package themselves.
+       */
+      if (stat.unknownNames.length) {
+        var det = el('details', 'missing');
+        var sum = el('summary', null,
+          'Which ' + (stat.unknownNames.length === 1 ? 'item has' : 'items have') +
+          ' no ' + COVERAGE_LABELS[key] + ' data?');
+        det.appendChild(sum);
+        var ul = el('ul');
+        stat.unknownNames.forEach(function (name) {
+          ul.appendChild(el('li', null, name));
+        });
+        det.appendChild(ul);
+        cov.appendChild(det);
+      }
+
       wrap.appendChild(cov);
     }
 
@@ -328,20 +349,35 @@
         main.appendChild(el('div', 'nums', Units.formatFluid(e.ml, state.fluidUnit)));
       } else {
         var n = e.nutrients || {};
-        var parts = ['phosphorus', 'potassium', 'sodium'].map(function (k) {
+        /* Potassium, phosphorus and sodium lead; energy and protein follow on
+         * their own line. Protein matters on dialysis — the diet is high
+         * protein and low phosphorus at the same time — so it belongs in the
+         * log rather than only in the daily total. */
+        var parts = ['potassium', 'phosphorus', 'sodium'].map(function (k) {
           var v = n[k];
           return NUTRIENT_LABELS[k] + ' ' +
             (v === null || v === undefined ? 'no data' : formatNutrient(k, v));
         });
         main.appendChild(el('div', 'nums', parts.join('  ·  ')));
 
+        var extra = ['energy', 'protein'].filter(function (k) {
+          return n[k] !== null && n[k] !== undefined;
+        }).map(function (k) {
+          return NUTRIENT_LABELS[k] + ' ' + formatNutrient(k, n[k]);
+        });
+        if (extra.length) main.appendChild(el('div', 'nums', extra.join('  ·  ')));
+
         var findings = (e.scan && e.scan.findings) || [];
         if (findings.length) {
+          /* Name them. A count tells you something was found; the names are
+           * what you can look up, recognise on the next package, or take to
+           * the dietitian. */
           var badges = el('div', 'badges');
-          var b = el('span', 'badge med');
-          b.textContent = '⚠ ' + findings.length +
-            (findings.length === 1 ? ' additive' : ' additives');
-          badges.appendChild(b);
+          findings.forEach(function (f) {
+            var b = el('span', 'badge med');
+            b.textContent = '⚠ ' + f.name;
+            badges.appendChild(b);
+          });
           main.appendChild(badges);
         }
       }
@@ -397,6 +433,47 @@
     return out;
   }
 
+  /*
+   * The numbers for one row, scaled to the portion we would default to.
+   *
+   * Choosing between two foods is the moment the numbers matter, and it was the
+   * one moment the app did not show them: you opened a food, discovered it was
+   * 800 mg of potassium, went back, and opened the next one. Showing three
+   * figures per row costs a line and removes that round trip.
+   *
+   * Order is potassium, phosphorus, sodium — the three a renal diet is actually
+   * managed on, most-restricted first. Energy and protein stay on the portion
+   * screen; five numbers per row is a spreadsheet, not a choice.
+   */
+  function factsLine(food) {
+    var grams = food.servingGrams || 100;
+    var label = food.servingLabel || '100 g';
+    var n = Foods.scaleTo(food, grams);
+
+    /* Always carry the gram weight. Rows are meant to be compared against each
+     * other, and "per cup" is not a comparable quantity — a cup of spinach and
+     * a cup of raisins differ by a factor of five by weight. */
+    if (!/\d\s*g\b/.test(label)) label += ' (' + Math.round(grams) + ' g)';
+
+    var wrap = el('div', 'facts');
+    wrap.appendChild(el('span', 'per', 'Per ' + label));
+
+    [['potassium', 'K'], ['phosphorus', 'P'], ['sodium', 'Na']].forEach(function (pair) {
+      var v = n[pair[0]];
+      var fact = el('span', 'fact');
+      fact.appendChild(el('span', 'k', pair[1]));
+      /* Unknown is shown as "?" in the same purple used by the daily total. A
+       * dash or a blank would read as zero, which is the error this whole app
+       * exists to stop making. */
+      var val = el('span', 'v' + (v === null || v === undefined ? ' unknown' : ''));
+      val.textContent = (v === null || v === undefined) ? '?' : formatNutrient(pair[0], v);
+      fact.appendChild(val);
+      wrap.appendChild(fact);
+    });
+
+    return wrap;
+  }
+
   /* One row renderer for every list, so a built-in food and a searched food
    * look and behave identically. */
   function foodRow(food) {
@@ -412,6 +489,7 @@
     }
     btn.appendChild(el('div', 'meta', meta.join(' · ')));
     btn.appendChild(dataQualityBadges(food));
+    btn.appendChild(factsLine(food));
 
     btn.addEventListener('click', function () { openPortion(food); });
     return btn;
