@@ -5,7 +5,7 @@
  *
  * This is shipped DATA, not logic, and the user acts on it directly, so the
  * tests are mostly invariants about the data itself. The failure that matters
- * is a plausible-looking wrong number: nobody can eyeball 1,411 potassium values,
+ * is a plausible-looking wrong number: nobody can eyeball 1,635 potassium values,
  * so the guards have to.
  */
 
@@ -30,7 +30,7 @@ var ALL = C.all();
  * ------------------------------------------------------------------ */
 
 test('library is non-trivial and every row is well formed', function () {
-  assert(C.count >= 1350, 'expected a useful library, got ' + C.count);
+  assert(C.count >= 1550, 'expected a useful library, got ' + C.count);
   assert(ALL.length === C.count);
   ALL.forEach(function (f) {
     assert(typeof f.name === 'string' && f.name.length > 1, 'bad name: ' + f.name);
@@ -55,10 +55,40 @@ test('every category is populated and listed', function () {
     assert(C.byCategory(cat).length >= 20,
       'thin category: ' + cat + ' has only ' + C.byCategory(cat).length);
   });
-  ALL.forEach(function (f, i) {
-    var cat = C.ROWS[i][2];
-    assert(C.CATEGORIES.indexOf(cat) !== -1, 'unlisted category: ' + cat);
+  /* Rows store a category INDEX, not the string, so go through the decoder —
+   * which is also what exercises the interning on every read. */
+  var counted = 0;
+  C.CATEGORIES.forEach(function (cat) { counted += C.byCategory(cat).length; });
+  assert(counted === C.count,
+    'categories cover ' + counted + ' of ' + C.count + ' foods');
+});
+
+test('the compressed row format round-trips', function () {
+  /*
+   * Rows intern their category and portion labels and store 0 for a USDA
+   * description identical to the name. That cut the file by a fifth, but a
+   * decoding slip would silently mislabel every portion — so check the
+   * decoded shape rather than trusting the byte count.
+   */
+  ALL.forEach(function (f) {
+    assert(typeof f.usdaDescription === 'string' && f.usdaDescription.length > 1,
+      'description did not decode: ' + f.name);
+    assert(f.dataType === 'FNDDS' || f.dataType === 'SR Legacy',
+      'bad dataType on ' + f.name + ': ' + f.dataType);
+    f.portions.forEach(function (p) {
+      assert(typeof p.label === 'string' && p.label.length > 0,
+        'portion label did not decode on ' + f.name + ': ' + JSON.stringify(p));
+      assert(!/^\d+$/.test(p.label),
+        'portion label looks like a raw index on ' + f.name + ': ' + p.label);
+    });
   });
+
+  var banana = ALL.filter(function (x) { return x.name === 'Banana'; })[0];
+  assert(banana.usdaDescription === 'Bananas, raw',
+    'expected the verbatim USDA record, got ' + banana.usdaDescription);
+  assert(banana.portions[0].label.indexOf('large') !== -1 ||
+         banana.portions[0].label.indexOf('cup') !== -1,
+    'banana portion label did not decode: ' + banana.portions[0].label);
 });
 
 /* ------------------------------------------------------------------ *

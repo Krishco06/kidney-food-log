@@ -1583,6 +1583,242 @@ const CURATED_FNDDS = [
   ['Drinks', 'Sangria, red', /^Sangria, red$/],
   ['Drinks', 'Wine spritzer', /^Wine spritzer$/],
   ['Drinks', 'Sangria, white', /^Sangria, white$/],
+
+  /* ---------------------------------------------------------------- *
+   * Depth-12 sweep. Paid for by compressing the row format first: the
+   * file was at 186 KB against a 200 KB parse budget, and interning
+   * portion labels and categories bought back ~35 KB.
+   *
+   * At this depth the sweep mostly returns restatements of foods already
+   * shipped ("Bagel" for "Bagel, plain", "Bread, rye" for "Rye bread"),
+   * so entries here survived a token-subset check against the whole
+   * library rather than a name comparison.
+   * ---------------------------------------------------------------- */
+
+  ['Prepared', 'Beans and rice, with tomatoes', /^Beans and rice, with tomatoes$/],
+  ['Prepared', 'Chili with beans, without meat', /^Chili with beans, without meat$/],
+  ['Prepared', 'Vegetarian chili, made with meat substitute', /^Vegetarian chili, made with meat substitute$/],
+  ['Prepared', 'Beans and rice, from fast food / restaurant', /^Beans and rice, from fast food \/ restaurant$/],
+  ['Grains', 'Bread, fruit', /^Bread, fruit$/],
+  ['Grains', 'Bread, pumpkin', /^Bread, pumpkin$/],
+  ['Snacks', 'Cake, cream', /^Cake, cream$/],
+  ['Snacks', 'Cake, torte', /^Cake, torte$/],
+  ['Snacks', 'Ladoo, round ball', /^Ladoo, round ball$/],
+  ['Dairy', 'Queso cotija', /^Queso cotija$/],
+  ['Dairy', 'Queso Asadero', /^Queso Asadero$/],
+  ['Drinks', 'Frozen coffee drink', /^Frozen coffee drink$/],
+  ['Drinks', 'Coffee, cafe con leche', /^Coffee, cafe con leche$/],
+  ['Drinks', 'Coffee, bottled/canned', /^Coffee, bottled\/canned$/],
+  ['Meat', 'Ham, canned', /^Ham, canned$/],
+  ['Meat', 'Ham, ground', /^Ham, ground$/],
+  ['Meat', 'Ham, prosciutto', /^Ham, prosciutto$/],
+  ['Meat', 'Venison sausage', /^Venison sausage$/],
+  ['Meat', 'Ham salad spread', /^Ham salad spread$/],
+  ['Meat', 'Venison/deer jerky', /^Venison\/deer jerky$/],
+  ['Prepared', 'Tomato aspic', /^Tomato aspic$/],
+  ['Prepared', 'Bean salad, yellow and/or green string beans', /^Bean salad, yellow and\/or green string beans$/],
+  ['Grains', 'Rice cake', /^Rice cake$/],
+  ['Grains', 'Zwieback toast', /^Zwieback toast$/],
+  ['Extras', 'Eggplant dip', /^Eggplant dip$/],
+  ['Extras', 'Garlic sauce', /^Garlic sauce$/],
+  ['Extras', 'Artichoke dip', /^Artichoke dip$/],
+  ['Extras', 'Welsh rarebit', /^Welsh rarebit$/],
+  ['Extras', 'Black bean sauce', /^Black bean sauce$/],
+  ['Extras', 'Hollandaise sauce', /^Hollandaise sauce$/],
+  ['Extras', 'Onion dip, regular', /^Onion dip, regular$/],
+  ['Extras', 'Ranch dip, regular', /^Ranch dip, regular$/],
+  ['Snacks', 'Breakfast tart', /^Breakfast tart$/],
+  ['Snacks', 'Roll, sweet, frosted', /^Roll, sweet, frosted$/],
+  ['Snacks', 'Pastry, fruit-filled', /^Pastry, fruit-filled$/],
+  ['Prepared', 'Wonton, dumpling or pot sticker, steamed', /^Wonton, dumpling or pot sticker, steamed$/],
+  ['Prepared', 'Egg roll, with shrimp', /^Egg roll, with shrimp$/],
+  ['Prepared', 'Egg roll, with chicken or turkey', /^Egg roll, with chicken or turkey$/],
+  ['Prepared', 'Egg sandwich on griddle/pancake', /^Egg sandwich on griddle\/pancake$/],
+  ['Prepared', 'Sausage griddle/pancake sandwich', /^Sausage griddle\/pancake sandwich$/],
+  ['Prepared', 'Breakfast pizza with egg', /^Breakfast pizza with egg$/],
+  ['Prepared', 'Egg, creamed', /^Egg, creamed$/],
+  ['Prepared', 'Egg, whole, raw', /^Egg, whole, raw$/],
+  ['Prepared', 'Egg, whole, baked, fat added', /^Egg, whole, baked, fat added$/],
+  ['Prepared', 'Egg, white, cooked, fat added', /^Egg, white, cooked, fat added$/],
+  ['Prepared', 'Egg, yolk only, cooked, fat added', /^Egg, yolk only, cooked, fat added$/],
+  ['Prepared', 'Hot dog sandwich, vegetarian, on bread', /^Hot dog sandwich, vegetarian, on bread$/],
+  ['Vegetable', 'Potato, french fries', /^Potato, french fries, NFS$/],
+  ['Vegetable', 'Potato tots, fast food / restaurant', /^Potato tots, fast food \/ restaurant$/],
+  ['Vegetable', 'Fried cauliflower', /^Fried cauliflower$/],
+  ['Vegetable', 'Vegetable tempura', /^Vegetable tempura$/],
+  ['Vegetable', 'Fried green tomatoes', /^Fried green tomatoes$/],
+  ['Vegetable', 'Fried summer squash, yellow or green', /^Fried summer squash, yellow or green$/],
+  ['Drinks', 'Fruit juice drink', /^Fruit juice drink$/],
+  ['Drinks', 'Slush frozen drink', /^Slush frozen drink$/],
+  ['Drinks', 'Wine, nonalcoholic', /^Wine, nonalcoholic$/],
+  ['Drinks', 'Fruit flavored drink', /^Fruit flavored drink$/],
+  ['Drinks', 'Fruit juice, acai blend', /^Fruit juice, acai blend$/],
+  ['Dairy', 'Gelato, vanilla', /^Gelato, vanilla$/],
+  ['Dairy', 'Gelato, chocolate', /^Gelato, chocolate$/],
+  ['Dairy', 'Sherbet, all flavors', /^Sherbet, all flavors$/],
+  ['Extras', 'Icing, white', /^Icing, white$/],
+  ['Extras', 'Fruit butter', /^Fruit butter$/],
+  ['Extras', 'Chocolate dip', /^Chocolate dip$/],
+  ['Extras', 'Dessert sauce', /^Dessert sauce$/],
+  ['Extras', 'Topping, fruit', /^Topping, fruit$/],
+  ['Prepared', 'Lettuce, raw', /^Lettuce, raw$/],
+  ['Prepared', 'Lettuce, cooked', /^Lettuce, cooked$/],
+  ['Prepared', 'Mixed salad greens, raw', /^Mixed salad greens, raw$/],
+  ['Prepared', 'Lettuce, salad with assorted vegetables excluding tomatoes and carrots, no dressing', /^Lettuce, salad with assorted vegetables excluding tomatoes and carrots, no dressing$/],
+  ['Prepared', 'Lettuce, salad with assorted vegetables including tomatoes and/or carrots, no dressing', /^Lettuce, salad with assorted vegetables including tomatoes and\/or carrots, no dressing$/],
+  ['Prepared', 'Lettuce, salad with egg, tomato, and/or carrots, with or without other vegetables, no dressing', /^Lettuce, salad with egg, tomato, and\/or carrots, with or without other vegetables, no dressing$/],
+  ['Drinks', 'Mojito', /^Mojito$/],
+  ['Drinks', 'Brandy', /^Brandy$/],
+  ['Drinks', 'Scotch', /^Scotch$/],
+  ['Drinks', 'Martini', /^Martini$/],
+  ['Drinks', 'Rob Roy', /^Rob Roy$/],
+  ['Drinks', 'Mai Tai', /^Mai Tai$/],
+  ['Drinks', 'Cape Cod', /^Cape Cod$/],
+  ['Vegetable', 'Stewed potatoes', /^Stewed potatoes$/],
+  ['Extras', 'Salad dressing, for sandwiches', /^Salad dressing, NFS, for sandwiches$/],
+  ['Prepared', 'Veal Marsala', /^Veal Marsala$/],
+  ['Prepared', 'Pepper steak', /^Pepper steak$/],
+  ['Prepared', 'Beef burgundy', /^Beef burgundy$/],
+  ['Prepared', 'Steak tartare', /^Steak tartare$/],
+  ['Prepared', 'Ham croquette', /^Ham croquette$/],
+  ['Prepared', 'Ham stroganoff', /^Ham stroganoff$/],
+  ['Prepared', 'Beef stroganoff', /^Beef stroganoff$/],
+  ['Prepared', 'Veal scallopini', /^Veal scallopini$/],
+  ['Extras', 'Buffalo sauce', /^Buffalo sauce$/],
+  ['Extras', 'Garlic, cooked', /^Garlic, cooked$/],
+  ['Extras', 'Hot peppers, cooked', /^Hot peppers, cooked$/],
+  ['Extras', 'Yeast extract spread', /^Yeast extract spread$/],
+  ['Extras', 'Pepper, hot chili, raw', /^Pepper, hot chili, raw$/],
+  ['Drinks', 'Nutritional drink or shake, high protein, light, ready-to-drink', /^Nutritional drink or shake, high protein, light, ready-to-drink, NFS$/],
+  ['Drinks', 'Nutritional drink or shake, liquid, soy-based', /^Nutritional drink or shake, liquid, soy-based$/],
+  ['Drinks', 'Nutritional drink or shake, ready-to-drink, sugar free (Glucerna)', /^Nutritional drink or shake, ready-to-drink, sugar free \(Glucerna\)$/],
+  ['Drinks', 'Nutritional drink or shake, ready-to-drink (Carnation Instant Breakfast)', /^Nutritional drink or shake, ready-to-drink \(Carnation Instant Breakfast\)$/],
+  ['Beans & nuts', 'Coconut, fresh', /^Coconut, fresh$/],
+  ['Beans & nuts', 'Peanuts, boiled', /^Peanuts, boiled$/],
+  ['Prepared', 'Taquito, chicken', /^Taquito, chicken$/],
+  ['Prepared', 'Chimichanga, meat', /^Chimichanga, meat$/],
+  ['Prepared', 'Chimichanga, chicken', /^Chimichanga, chicken$/],
+  ['Prepared', 'Chinese pancake', /^Chinese pancake$/],
+  ['Prepared', 'Noodle pudding', /^Noodle pudding$/],
+  ['Prepared', 'Lasagna with meat', /^Lasagna with meat$/],
+  ['Prepared', 'Spaghetti and meatballs dinner, frozen meal', /^Spaghetti and meatballs dinner, NFS, frozen meal$/],
+  ['Prepared', 'Lasagna with chicken or turkey', /^Lasagna with chicken or turkey$/],
+  ['Grains', 'Buckwheat groats', /^Buckwheat groats$/],
+  ['Grains', 'Bulgur, fat added', /^Bulgur, fat added$/],
+  ['Grains', 'Pasta, gluten free', /^Pasta, gluten free$/],
+  ['Grains', 'Pasta, vegetable, cooked', /^Pasta, vegetable, cooked$/],
+  ['Grains', 'Noodles, vegetable, cooked', /^Noodles, vegetable, cooked$/],
+  ['Prepared', 'Chicken or turkey parmigiana', /^Chicken or turkey parmigiana$/],
+  ['Prepared', 'Chicken or turkey tetrazzini', /^Chicken or turkey tetrazzini$/],
+  ['Prepared', 'Chicken or turkey cordon bleu', /^Chicken or turkey cordon bleu$/],
+  ['Prepared', 'Chicken dinner, frozen meal', /^Chicken dinner, NFS, frozen meal$/],
+  ['Prepared', 'Chicken or turkey and rice, no sauce', /^Chicken or turkey and rice, no sauce$/],
+  ['Prepared', 'Adobo, with rice', /^Adobo, with rice$/],
+  ['Prepared', 'Chicken or turkey creole, without rice', /^Chicken or turkey creole, without rice$/],
+  ['Prepared', 'Chicken or turkey and noodles, no sauce', /^Chicken or turkey and noodles, no sauce$/],
+  ['Prepared', 'Adobo, with noodles', /^Adobo, with noodles$/],
+  ['Snacks', 'Snack mix', /^Snack mix$/],
+  ['Beans & nuts', 'Vegetarian, fillet', /^Vegetarian, fillet$/],
+  ['Beans & nuts', 'Bacon strip, meatless', /^Bacon strip, meatless$/],
+  ['Beans & nuts', 'Frozen dessert, non-dairy', /^Frozen dessert, non-dairy$/],
+  ['Beans & nuts', 'Breakfast link, pattie, or slice, meatless', /^Breakfast link, pattie, or slice, meatless$/],
+  ['Beans & nuts', 'Vermicelli, made from soybeans', /^Vermicelli, made from soybeans$/],
+  ['Snacks', 'Pudding, rice', /^Pudding, rice$/],
+  ['Snacks', 'Pudding, bread', /^Pudding, bread$/],
+  ['Snacks', 'Dulce de leche', /^Dulce de leche$/],
+  ['Snacks', 'Firni, Indian pudding', /^Firni, Indian pudding$/],
+  ['Snacks', 'Pudding, tapioca, ready-to-eat', /^Pudding, tapioca, ready-to-eat$/],
+  ['Snacks', 'Barfi or Burfi, Indian dessert', /^Barfi or Burfi, Indian dessert$/],
+  ['Prepared', 'Biryani with meat', /^Biryani with meat$/],
+  ['Prepared', 'Biryani with chicken', /^Biryani with chicken$/],
+  ['Prepared', 'Biryani with vegetables', /^Biryani with vegetables$/],
+  ['Prepared', 'Spanish rice, from restaurant', /^Spanish rice, from restaurant$/],
+  ['Prepared', 'Spanish rice with ground beef', /^Spanish rice with ground beef$/],
+  ['Grains', 'Roll, sour dough', /^Roll, sour dough$/],
+  ['Grains', 'Roll, multigrain', /^Roll, multigrain$/],
+  ['Grains', 'Roll, white, soft', /^Roll, white, soft$/],
+  ['Grains', 'Roll, white, hard', /^Roll, white, hard$/],
+  ['Grains', 'Roll, whole wheat', /^Roll, whole wheat$/],
+  ['Grains', 'Roll, gluten free', /^Roll, gluten free$/],
+  ['Grains', 'Roll, pumpernickel', /^Roll, pumpernickel$/],
+  ['Grains', 'Roll, French or Vienna', /^Roll, French or Vienna$/],
+  ['Grains', 'Roll, Mexican, bolillo', /^Roll, Mexican, bolillo$/],
+  ['Grains', 'Roll, whole grain white', /^Roll, whole grain white$/],
+  ['Extras', 'Soybean oil', /^Soybean oil$/],
+  ['Extras', 'Safflower oil', /^Safflower oil$/],
+  ['Extras', 'Cottonseed oil', /^Cottonseed oil$/],
+  ['Extras', 'Sesame dressing', /^Sesame dressing$/],
+  ['Extras', 'Russian dressing', /^Russian dressing$/],
+  ['Extras', 'Bacon and tomato dressing', /^Bacon and tomato dressing$/],
+  ['Meat', 'Blood sausage', /^Blood sausage$/],
+  ['Meat', 'Polish sausage', /^Polish sausage$/],
+  ['Meat', 'Pickled sausage', /^Pickled sausage$/],
+  ['Meat', 'Scrapple, cooked', /^Scrapple, cooked$/],
+  ['Meat', 'Vienna sausage, canned', /^Vienna sausage, canned$/],
+  ['Meat', 'Pork sausage rice links', /^Pork sausage rice links$/],
+  ['Meat', 'Turkey or chicken sausage', /^Turkey or chicken sausage$/],
+  ['Prepared', 'Shrimp salad', /^Shrimp salad$/],
+  ['Prepared', 'Bouillabaisse', /^Bouillabaisse$/],
+  ['Prepared', 'Lobster salad', /^Lobster salad$/],
+  ['Prepared', 'Lobster gumbo', /^Lobster gumbo$/],
+  ['Prepared', 'Gumbo, no rice', /^Gumbo, no rice$/],
+  ['Prepared', 'Bacalao guisado', /^Bacalao guisado$/],
+  ['Prepared', 'Seafood souffle', /^Seafood souffle$/],
+  ['Prepared', 'Seafood thermidor', /^Seafood thermidor$/],
+  ['Prepared', 'Bacalaitos fritos', /^Bacalaitos fritos$/],
+  ['Prepared', 'Tuna cake or patty', /^Tuna cake or patty$/],
+  ['Prepared', 'Clam cake or patty', /^Clam cake or patty$/],
+  ['Fish', 'Escargot', /^Escargot$/],
+  ['Fish', 'Frog legs', /^Frog legs$/],
+  ['Fish', 'Clams, raw', /^Clams, raw$/],
+  ['Fish', 'Clams, fried', /^Clams, fried$/],
+  ['Drinks', 'Oatmeal beverage with water', /^Oatmeal beverage with water$/],
+  ['Prepared', 'Pepperpot soup', /^Pepperpot soup$/],
+  ['Prepared', 'Lobster bisque', /^Lobster bisque$/],
+  ['Prepared', 'Potato chowder', /^Potato chowder$/],
+  ['Prepared', 'Sweet and sour soup', /^Sweet and sour soup$/],
+  ['Prepared', 'Italian Wedding Soup', /^Italian Wedding Soup$/],
+  ['Prepared', 'Soup, mostly noodles', /^Soup, mostly noodles$/],
+  ['Prepared', 'Menudo soup, home recipe', /^Menudo soup, home recipe$/],
+  ['Prepared', 'Vegetable broth, bouillon', /^Vegetable broth, bouillon$/],
+  ['Prepared', 'Kung Pao shrimp', /^Kung Pao shrimp$/],
+  ['Prepared', 'Kung pao chicken', /^Kung pao chicken$/],
+  ['Prepared', 'Sweet and sour shrimp', /^Sweet and sour shrimp$/],
+  ['Prepared', 'Sweet and sour chicken or turkey', /^Sweet and sour chicken or turkey$/],
+  ['Prepared', 'Pork and vegetables, Hawaiian style', /^Pork and vegetables, Hawaiian style$/],
+  ['Drinks', 'Tea, hot, leaf, green', /^Tea, hot, leaf, green$/],
+  ['Drinks', 'Tea, hot, leaf, oolong', /^Tea, hot, leaf, oolong$/],
+  ['Drinks', 'Tea, iced, bottled, black', /^Tea, iced, bottled, black$/],
+  ['Drinks', 'Tea, iced, bottled, green', /^Tea, iced, bottled, green$/],
+  ['Drinks', 'Iced Tea / Lemonade juice drink', /^Iced Tea \/ Lemonade juice drink$/],
+  ['Snacks', 'Vegetable chips', /^Vegetable chips$/],
+  ['Grains', 'Gordita/sope shell, plain, no filling', /^Gordita\/sope shell, plain, no filling$/],
+  ['Snacks', 'Turnover or lean pocket', /^Turnover or lean pocket$/],
+  ['Snacks', 'Stuffed jalapeno pepper', /^Stuffed jalapeno pepper$/],
+  ['Snacks', 'Spinach quiche, meatless', /^Spinach quiche, meatless$/],
+  ['Snacks', 'Turnover or hot pocket, ham', /^Turnover or hot pocket, ham$/],
+  ['Snacks', 'Turnover or hot pocket, beef', /^Turnover or hot pocket, beef$/],
+  ['Snacks', 'Pastry, meat / poultry-filled', /^Pastry, meat \/ poultry-filled$/],
+  ['Snacks', 'Turnover or hot pocket, chicken', /^Turnover or hot pocket, chicken$/],
+  ['Snacks', 'Turnover or hot pocket, meatless', /^Turnover or hot pocket, meatless$/],
+  ['Snacks', 'Turnover or breakfast pocket, egg', /^Turnover or breakfast pocket, egg$/],
+  ['Vegetable', 'Squash, winter, souffle', /^Squash, winter, souffle$/],
+  ['Vegetable', 'Squash, summer, souffle', /^Squash, summer, souffle$/],
+  ['Vegetable', 'Greek Salad, no dressing', /^Greek Salad, no dressing$/],
+  ['Vegetable', 'Spinach salad, no dressing', /^Spinach salad, no dressing$/],
+  ['Vegetable', 'Corn, scalloped or pudding', /^Corn, scalloped or pudding$/],
+  ['Vegetable', 'Vegetable stew without meat', /^Vegetable stew without meat$/],
+  ['Vegetable', 'Broccoli casserole with rice', /^Broccoli casserole with rice$/],
+  ['Vegetable', 'Broccoli casserole with noodles', /^Broccoli casserole with noodles$/],
+  ['Vegetable', 'Stuffed tomato, with rice and meat', /^Stuffed tomato, with rice and meat$/],
+  ['Drinks', 'Champagne punch', /^Champagne punch$/],
+  ['Drinks', 'Wine, table, rose', /^Wine, table, rose$/],
+  ['Drinks', 'Wine, light', /^Wine, light$/],
+  ['Grains', 'Bread, rice', /^Bread, rice$/],
+  ['Grains', 'Bread, Cuban', /^Bread, Cuban$/],
+  ['Grains', 'Bread, onion', /^Bread, onion$/],
+  ['Grains', 'Bread, black', /^Bread, black$/],
+  ['Grains', 'Bread, barley', /^Bread, barley$/],
   ['Grains', 'Garlic bread', /^Garlic bread, NFS$/],
   ['Grains', 'Bread, soy', /^Bread, soy$/],
   ['Grains', 'Bread, puri', /^Bread, puri$/],
@@ -1768,10 +2004,37 @@ function main() {
   const cats = [...new Set(out.map((f) => f.cat))];
   const noPortion = out.filter((f) => !f.p.length);
 
+  /*
+   * COMPRESSION
+   *
+   * The row format grew naive and the file reached 186 KB, which is what a
+   * phone parses on every cold start. Measuring where the bytes went showed
+   * three kinds of pure repetition, all fixed losslessly here:
+   *
+   *   portion labels   2,235 uses of 503 distinct strings; "cup" alone 593
+   *                    times. Interned into a table, rows store an index.
+   *   category         11 distinct values written out 1,411 times.
+   *   usdaDescription  36% of rows repeated the display name verbatim, since
+   *                    the name is derived from it. Those store 0 and fall
+   *                    back to the name at read time.
+   *
+   * Together this cut roughly a quarter of the file with no loss of data.
+   */
+  const labels = [];
+  const labelIndex = new Map();
+  for (const f of out) {
+    for (const p of f.p) {
+      if (!labelIndex.has(p.label)) { labelIndex.set(p.label, labels.length); labels.push(p.label); }
+    }
+  }
+  const catIndex = new Map(cats.map((c, i) => [c, i]));
+
   const body = out.map((f) =>
-    '  [' + f.id + ',' + JSON.stringify(f.name) + ',' + JSON.stringify(f.cat) + ',' +
-    JSON.stringify(f.n) + ',' + JSON.stringify(f.p.map((x) => [x.label, x.g])) + ',' +
-    JSON.stringify(f.src) + ',' + JSON.stringify(f.ds) + ']'
+    '  [' + f.id + ',' + JSON.stringify(f.name) + ',' + catIndex.get(f.cat) + ',' +
+    JSON.stringify(f.n) + ',' +
+    JSON.stringify(f.p.map((x) => [labelIndex.get(x.label), x.g])) + ',' +
+    (f.src === f.name ? '0' : JSON.stringify(f.src)) + ',' +
+    (f.ds === 'fndds' ? '1' : '0') + ']'
   ).join(',\n');
 
   const js = `/*
@@ -1800,15 +2063,25 @@ function main() {
  * judgment to make.
  *
  * Row format, kept compact because it is parsed on every load:
- *   [fdcId, name, category, [energy, protein, sodium, potassium, phosphorus], portions, usdaDescription]
+ *   [fdcId, name, catIndex, [energy, protein, sodium, potassium, phosphorus],
+ *    portions, usdaDescription|0, isFndds]
  *   nutrients are per 100 g — kcal, g, mg, mg, mg
- *   portions are [label, grams]
+ *   portions are [labelIndex, grams]; labelIndex points into LABELS
+ *   catIndex points into CATEGORIES
+ *   usdaDescription is 0 when identical to the name (36% of rows)
  */
 
 (function (root) {
   'use strict';
 
   var CATEGORIES = ${JSON.stringify(cats)};
+
+  /*
+   * Interned portion labels. 2,235 portions across the library use only these
+   * ${labels.length} distinct strings — "cup" alone appears 593 times — so rows store an
+   * index instead of repeating the text.
+   */
+  var LABELS = ${JSON.stringify(labels)};
 
   var ROWS = [
 ${body}
@@ -1817,6 +2090,7 @@ ${body}
   /* Expanded to the same shape foods.js produces, so a common food and a
    * searched food are indistinguishable downstream. */
   function toFood(row) {
+    var portions = row[4];
     return {
       id: 'usda:' + row[0],
       source: 'usda',
@@ -1824,7 +2098,7 @@ ${body}
        * foods; FNDDS is the "as consumed" survey database, which is where the
        * composite dishes live. Shown in search results so the difference is
        * visible rather than blended away. */
-      dataType: row[6] === 'fndds' ? 'FNDDS' : 'SR Legacy',
+      dataType: row[6] ? 'FNDDS' : 'SR Legacy',
       name: row[1],
       brand: '',
       barcode: '',
@@ -1834,23 +2108,30 @@ ${body}
       },
       ingredientsText: '',
       additivesTags: [],
-      servingGrams: row[4].length ? row[4][0][1] : null,
-      servingLabel: row[4].length ? row[4][0][0] : '',
+      servingGrams: portions.length ? portions[0][1] : null,
+      servingLabel: portions.length ? LABELS[portions[0][0]] : '',
       isLiquid: false,
       /* Whole foods have no ingredient list to read, which is different from
        * having one we could not check. scanned:false says exactly that. */
       scan: { scanned: false, findings: [] },
-      portions: row[4].map(function (p) { return { label: p[0], grams: p[1] }; }),
-      /* The verbatim USDA record name. Shown in the portion picker so the
-       * user can see exactly which record a number came from. */
-      usdaDescription: row[5]
+      portions: portions.map(function (p) {
+        return { label: LABELS[p[0]], grams: p[1] };
+      }),
+      /*
+       * The verbatim USDA record name, shown in the portion picker so the user
+       * can see exactly which record a number came from. Stored as 0 when it
+       * is identical to the display name, which is true of 36% of rows because
+       * the name is derived from it.
+       */
+      usdaDescription: row[5] || row[1]
     };
   }
 
   function all() { return ROWS.map(toFood); }
 
   function byCategory(cat) {
-    return ROWS.filter(function (r) { return r[2] === cat; }).map(toFood);
+    var idx = CATEGORIES.indexOf(cat);
+    return ROWS.filter(function (r) { return r[2] === idx; }).map(toFood);
   }
 
   /* Substring match on the plain name. Deliberately simple — this runs on every

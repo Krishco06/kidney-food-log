@@ -71,7 +71,7 @@ the exact false precision this app exists to reject.
 
 | Use | Source | Why |
 |---|---|---|
-| **Built-in library** | **USDA SR Legacy + FNDDS, bundled (`js/commonfoods.js`)** | **1,411 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
+| **Built-in library** | **USDA SR Legacy + FNDDS, bundled (`js/commonfoods.js`)** | **1,635 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
 | Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
@@ -95,7 +95,7 @@ hours. A food log that cannot record a banana without a round trip is not usable
 and while the proxy was undeployed, searching a brand returned nothing at all,
 which reads as a broken app rather than a missing connection.
 
-So 1,411 everyday foods ship with the app. They appear **as you type**, with no
+So 1,635 everyday foods ship with the app. They appear **as you type**, with no
 network call, and are browsable by category. Branded is not the source, because
 it is label-derived: every entry here has a real measured phosphorus *and*
 potassium value, which is exactly what 98.55% of branded records lack. Records
@@ -106,7 +106,7 @@ with an incomplete panel were dropped rather than shipped with gaps.
 | Dataset | Rows | What it is | Why both |
 |---|---|---|---|
 | **SR Legacy** | 789 | Laboratory-analysed whole foods | Bananas, chicken breast, cheddar — the ingredients |
-| **FNDDS** | 622 | The "as consumed" survey database + packaged goods | Shepherd's pie, gyros, sushi, cereals, chips, condiments |
+| **FNDDS** | 846 | The "as consumed" survey database + packaged goods | Shepherd's pie, gyros, sushi, cereals, chips, condiments |
 
 SR Legacy is an ingredient database. It has ground beef and flour but no
 shepherd's pie, which is why three expansions in a row failed to find lasagna,
@@ -137,19 +137,28 @@ growth broke something measurable:
   every row builds thousands of DOM nodes; at 789 foods that already took a
   category switch from ~1 ms to ~40 ms on a desktop, and far worse on the
   phones this audience uses.
-- Type-ahead renders **25 matches** and reports the true total. At 1,411 foods a
+- Type-ahead renders **25 matches** and reports the true total. At 1,635 foods a
   short prefix matches dozens — "chic" hits 55 — and a wall of rows re-rendered
   on every keystroke is not scannable. The hint tells you to type one more
   letter, which is the right move anyway.
 
 Search is the real way in; browsing is for orientation.
 
-**Size is now the binding constraint, not coverage.** 186 KB raw against a
-200 KB test limit — the limit guards cold-start parse cost, which is what an
-old phone actually pays. Transfer is not the issue (52 KB gzipped, and Pages
-serves it compressed) and the measured parse is 16 ms. Growing much past this
-needs a real measurement on a low-end device first, which is what the test
-comment says.
+**The row format is compressed, which is what paid for the last expansion.**
+At 1,411 foods the file hit 186 KB against a 200 KB limit — a limit that guards
+cold-start *parse* cost, the thing an old phone actually pays. Measuring where
+the bytes went found three kinds of pure repetition:
+
+| Waste | Fix |
+|---|---|
+| 2,235 portion labels drawn from 503 distinct strings — `"cup"` alone 593 times | interned into `LABELS`, rows store an index |
+| 11 category strings written out for every row | interned into `CATEGORIES` |
+| 36% of rows repeated the display name as their USDA description | stored as `0`, falls back to the name |
+
+That returned ~35 KB losslessly and dropped the cost to **106 bytes per food**,
+so 1,635 foods now fit in 170 KB and parse in 7 ms. A test decodes every row
+and asserts no portion label survives as a raw index, because a decoding slip
+would silently mislabel every portion in the app.
 
 Regenerate with `tools/gen-common.js` against the two USDA bulk downloads (no
 API key needed; needs `node --max-old-space-size=6144`, the SR JSON is 210 MB):
@@ -161,7 +170,7 @@ node --max-old-space-size=6144 tools/gen-common.js /path/to/sr_legacy.json /path
 Entries are matched by regex against the shortest matching USDA description,
 which is fast but silently wrong sometimes — and **a wrong record under a
 plausible name is the worst defect this file can carry**, because nobody can
-eyeball 1,411 bindings. So the generator warns on three patterns, each modelled
+eyeball 1,635 bindings. So the generator warns on three patterns, each modelled
 on a real bug found by reading output rather than by anything crashing:
 
 | Guard | The bug it was written for |
@@ -395,7 +404,7 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-js/commonfoods.js       GENERATED: 1,411 offline foods, SR Legacy + FNDDS (186 KB, 52 KB gzipped)
+js/commonfoods.js       GENERATED: 1,635 offline foods, SR Legacy + FNDDS (170 KB, 55 KB gzipped)
 test/                   160 tests (incl. worker/test)
 ```
 
