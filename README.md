@@ -71,7 +71,7 @@ the exact false precision this app exists to reject.
 
 | Use | Source | Why |
 |---|---|---|
-| **Built-in library** | **USDA SR Legacy + FNDDS, bundled (`js/commonfoods.js`)** | **910 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
+| **Built-in library** | **USDA SR Legacy + FNDDS, bundled (`js/commonfoods.js`)** | **1,037 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
 | Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
@@ -95,7 +95,7 @@ hours. A food log that cannot record a banana without a round trip is not usable
 and while the proxy was undeployed, searching a brand returned nothing at all,
 which reads as a broken app rather than a missing connection.
 
-So 910 everyday foods ship with the app. They appear **as you type**, with no
+So 1,037 everyday foods ship with the app. They appear **as you type**, with no
 network call, and are browsable by category. Branded is not the source, because
 it is label-derived: every entry here has a real measured phosphorus *and*
 potassium value, which is exactly what 98.55% of branded records lack. Records
@@ -106,7 +106,7 @@ with an incomplete panel were dropped rather than shipped with gaps.
 | Dataset | Rows | What it is | Why both |
 |---|---|---|---|
 | **SR Legacy** | 789 | Laboratory-analysed whole foods | Bananas, chicken breast, cheddar — the ingredients |
-| **FNDDS** | 121 | The "as consumed" survey database | Shepherd's pie, gyros, sushi, pot pie — the *dishes* |
+| **FNDDS** | 248 | The "as consumed" survey database | Shepherd's pie, gyros, sushi, pot pie — the *dishes* |
 
 SR Legacy is an ingredient database. It has ground beef and flour but no
 shepherd's pie, which is why three expansions in a row failed to find lasagna,
@@ -130,7 +130,7 @@ bananas, chocolate, processed cheese — rather than being skewed "kidney-friend
 This is a logbook: a log you cannot record your actual dinner in is useless, and
 what the user ate is not the app's judgment to make.
 
-The browse list renders **60 rows at a time** behind a "Show all" tap. At 910
+The browse list renders **60 rows at a time** behind a "Show all" tap. At 1,037
 foods a full render builds roughly 3,000 DOM nodes, which measured ~40 ms on a
 desktop and would be several times that on the phones this audience actually
 uses. Search is the real way in; browsing is for orientation.
@@ -145,7 +145,7 @@ node --max-old-space-size=6144 tools/gen-common.js /path/to/sr_legacy.json /path
 Entries are matched by regex against the shortest matching USDA description,
 which is fast but silently wrong sometimes — and **a wrong record under a
 plausible name is the worst defect this file can carry**, because nobody can
-eyeball 910 bindings. So the generator warns on three patterns, each modelled
+eyeball 1,037 bindings. So the generator warns on three patterns, each modelled
 on a real bug found by reading output rather than by anything crashing:
 
 | Guard | The bug it was written for |
@@ -165,10 +165,29 @@ complete-panel record in SR Legacy were dropped rather than bound to something
 approximate — that removed brownies, cheesecake, buttermilk, lima beans and a
 dozen others.
 
-**Adding foods.** Writing patterns blind wastes a round on ones that match
-nothing (42 of them, once). `tools/suggest-foods.js` probes the dataset first
-and emits ready-to-paste lines anchored to descriptions that are known to exist
-with a full panel:
+**Adding foods, systematically.** Four rounds of hand-guessing dish names hit
+its limit. FNDDS ships its own taxonomy (WWEIA food categories) and its own
+convention for the generic average of a food — a description ending in `, NFS`
+(Not Further Specified). `tools/mine-fndds.js` walks the taxonomy and takes the
+most generic unused record from each dish category, which is exactly what a
+built-in library wants: the average taco rather than one particular taco.
+
+It is deliberately restricted to **dish-like categories**. An unrestricted
+sweep immediately offered "Apple, raw" and "Banana, raw" beside the SR Legacy
+apples and bananas already shipped — near-duplicate whole foods with slightly
+different numbers, which is confusing rather than useful. SR owns ingredients;
+FNDDS owns dishes, and the mapping table enforces that.
+
+Its output still needs reading. Of 168 candidates, 41 were rejected: `Big Mac`
+and `Spam sandwich` (trademarks), `Topping from cheese pizza` (a survey
+artifact — the topping scraped off, not a food anyone logs), `Frozen dinner`
+and `Barbecue meat` (averages too broad to mean anything), and three
+near-identical bread variants of the same sandwich.
+
+**Adding foods by hand.** Writing patterns blind wastes a round on ones that
+match nothing (42 of them, once). `tools/suggest-foods.js` probes the dataset
+first and emits ready-to-paste lines anchored to descriptions that are known to
+exist with a full panel:
 
 ```bash
 node --max-old-space-size=6144 tools/suggest-foods.js /path/to/sr_legacy.json
@@ -360,7 +379,7 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-js/commonfoods.js       GENERATED: 910 offline foods, USDA SR Legacy + FNDDS (126 KB, ~38 KB gzipped)
+js/commonfoods.js       GENERATED: 1,037 offline foods, SR Legacy + FNDDS (140 KB, 41 KB gzipped)
 test/                   160 tests (incl. worker/test)
 ```
 
