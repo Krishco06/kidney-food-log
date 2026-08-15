@@ -452,7 +452,17 @@
     return wrap;
   }
 
-  /* Runs on every keystroke against ~149 local rows. No network, no spinner. */
+  /*
+   * How many local matches to actually draw.
+   *
+   * The library is large enough now that a short prefix can match dozens —
+   * "chic" hits 55 — and a wall of rows is not scannable on a phone, quite
+   * apart from re-rendering them on every keystroke. Show a screenful and say
+   * how many there really are, so typing one more letter is the obvious move.
+   */
+  var LOCAL_RESULT_LIMIT = 25;
+
+  /* Runs on every keystroke against the local rows. No network, no spinner. */
   function renderLocalMatches(q) {
     var host = $('results');
     clear(host);
@@ -462,10 +472,13 @@
     toggleCommon(false);
 
     if (local.length) {
+      var shown = local.slice(0, LOCAL_RESULT_LIMIT);
+      var hint = local.length > shown.length
+        ? 'Showing the first ' + shown.length + '. Type more to narrow it down.'
+        : 'Ready to add now. Press Search to also look online for brands.';
       host.appendChild(sectionHeading(
-        local.length + ' built-in ' + (local.length === 1 ? 'food' : 'foods'),
-        'Ready to add now. Press Search to also look online for brands.'));
-      local.forEach(function (f) { host.appendChild(foodRow(f)); });
+        local.length + ' built-in ' + (local.length === 1 ? 'food' : 'foods'), hint));
+      shown.forEach(function (f) { host.appendChild(foodRow(f)); });
     } else {
       host.appendChild(el('div', 'empty',
         'Nothing in the built-in list matches. Press Search to look online.'));

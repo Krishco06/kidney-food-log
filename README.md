@@ -71,7 +71,7 @@ the exact false precision this app exists to reject.
 
 | Use | Source | Why |
 |---|---|---|
-| **Built-in library** | **USDA SR Legacy + FNDDS, bundled (`js/commonfoods.js`)** | **1,037 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
+| **Built-in library** | **USDA SR Legacy + FNDDS, bundled (`js/commonfoods.js`)** | **1,411 everyday foods that need no network, key or proxy. Every one has a lab-measured P *and* K.** |
 | Text search | USDA FoodData Central (Foundation, SR Legacy, FNDDS, Branded) | Analyzed datasets carry real P and K; Branded carries the `ingredients` string. CORS-clean. Public domain. |
 | Text search | Open Food Facts, **via the proxy Worker** | USDA Branded coverage of everyday supermarket products is patchy, and OFF carries far richer ingredient text. |
 | Barcode | Open Food Facts, falling back to USDA Branded `gtinUpc` | Largest barcode coverage and richest ingredient text. |
@@ -95,7 +95,7 @@ hours. A food log that cannot record a banana without a round trip is not usable
 and while the proxy was undeployed, searching a brand returned nothing at all,
 which reads as a broken app rather than a missing connection.
 
-So 1,037 everyday foods ship with the app. They appear **as you type**, with no
+So 1,411 everyday foods ship with the app. They appear **as you type**, with no
 network call, and are browsable by category. Branded is not the source, because
 it is label-derived: every entry here has a real measured phosphorus *and*
 potassium value, which is exactly what 98.55% of branded records lack. Records
@@ -106,7 +106,7 @@ with an incomplete panel were dropped rather than shipped with gaps.
 | Dataset | Rows | What it is | Why both |
 |---|---|---|---|
 | **SR Legacy** | 789 | Laboratory-analysed whole foods | Bananas, chicken breast, cheddar — the ingredients |
-| **FNDDS** | 248 | The "as consumed" survey database | Shepherd's pie, gyros, sushi, pot pie — the *dishes* |
+| **FNDDS** | 622 | The "as consumed" survey database + packaged goods | Shepherd's pie, gyros, sushi, cereals, chips, condiments |
 
 SR Legacy is an ingredient database. It has ground beef and flour but no
 shepherd's pie, which is why three expansions in a row failed to find lasagna,
@@ -130,10 +130,26 @@ bananas, chocolate, processed cheese — rather than being skewed "kidney-friend
 This is a logbook: a log you cannot record your actual dinner in is useless, and
 what the user ate is not the app's judgment to make.
 
-The browse list renders **60 rows at a time** behind a "Show all" tap. At 1,037
-foods a full render builds roughly 3,000 DOM nodes, which measured ~40 ms on a
-desktop and would be several times that on the phones this audience actually
-uses. Search is the real way in; browsing is for orientation.
+**Two caps keep a library this size usable on a phone**, both added because
+growth broke something measurable:
+
+- The browse list renders **60 rows** behind a "Show all" tap. A full render of
+  every row builds thousands of DOM nodes; at 789 foods that already took a
+  category switch from ~1 ms to ~40 ms on a desktop, and far worse on the
+  phones this audience uses.
+- Type-ahead renders **25 matches** and reports the true total. At 1,411 foods a
+  short prefix matches dozens — "chic" hits 55 — and a wall of rows re-rendered
+  on every keystroke is not scannable. The hint tells you to type one more
+  letter, which is the right move anyway.
+
+Search is the real way in; browsing is for orientation.
+
+**Size is now the binding constraint, not coverage.** 186 KB raw against a
+200 KB test limit — the limit guards cold-start parse cost, which is what an
+old phone actually pays. Transfer is not the issue (52 KB gzipped, and Pages
+serves it compressed) and the measured parse is 16 ms. Growing much past this
+needs a real measurement on a low-end device first, which is what the test
+comment says.
 
 Regenerate with `tools/gen-common.js` against the two USDA bulk downloads (no
 API key needed; needs `node --max-old-space-size=6144`, the SR JSON is 210 MB):
@@ -145,7 +161,7 @@ node --max-old-space-size=6144 tools/gen-common.js /path/to/sr_legacy.json /path
 Entries are matched by regex against the shortest matching USDA description,
 which is fast but silently wrong sometimes — and **a wrong record under a
 plausible name is the worst defect this file can carry**, because nobody can
-eyeball 1,037 bindings. So the generator warns on three patterns, each modelled
+eyeball 1,411 bindings. So the generator warns on three patterns, each modelled
 on a real bug found by reading output rather than by anything crashing:
 
 | Guard | The bug it was written for |
@@ -379,7 +395,7 @@ js/log.js               storage, honest totals, CSV export, regulatory boundary
 js/units.js             mg / mmol / mEq, salt↔sodium, mL↔fl oz
 js/app.js               view controller
 sw.js                   offline shell, stale-while-revalidate
-js/commonfoods.js       GENERATED: 1,037 offline foods, SR Legacy + FNDDS (140 KB, 41 KB gzipped)
+js/commonfoods.js       GENERATED: 1,411 offline foods, SR Legacy + FNDDS (186 KB, 52 KB gzipped)
 test/                   160 tests (incl. worker/test)
 ```
 

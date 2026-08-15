@@ -67,7 +67,48 @@ const MAP = {
   'Gelatins, ices, sorbets': 'Snacks', 'Pudding': 'Snacks',
 
   // --- dips and sauces as served (SR has bottled; FNDDS has the dips) ---
-  'Dips, gravies, other sauces': 'Extras'
+  'Dips, gravies, other sauces': 'Extras',
+
+  /* --- TIER 2: packaged and processed products ---
+   *
+   * The near-duplicate problem is specifically about RAW WHOLE FOODS: an FNDDS
+   * "Apple, raw" beside an SR "Apple, with skin" is two apples with different
+   * numbers and no way for a reader to choose. That does not apply to packaged
+   * goods, where SR coverage is thin (two breakfast cereals, a handful of
+   * cookies) and FNDDS carries the generic averages people actually buy.
+   *
+   * Still deliberately absent: raw produce, plain milk, plain cuts of meat,
+   * plain juice. Those stay SR-only, where they are laboratory-analysed. */
+  'Ready-to-eat cereal, higher sugar (>21.2g/100g)': 'Grains',
+  'Ready-to-eat cereal, lower sugar (=<21.2g/100g)': 'Grains',
+  'Yeast breads': 'Grains', 'Rolls and buns': 'Grains',
+  'Biscuits, muffins, quick breads': 'Grains',
+  'Bagels and English muffins': 'Grains', 'Tortillas': 'Grains',
+  'Crackers, excludes saltines': 'Grains', 'Pasta, noodles, cooked grains': 'Grains',
+
+  'Cookies and brownies': 'Snacks', 'Cakes and pies': 'Snacks',
+  'Candy containing chocolate': 'Snacks', 'Candy not containing chocolate': 'Snacks',
+  'Potato chips': 'Snacks', 'Tortilla, corn, other chips': 'Snacks',
+  'Popcorn': 'Snacks', 'Pretzels/snack mix': 'Snacks',
+  'Cereal bars': 'Snacks', 'Nutrition bars': 'Snacks',
+
+  'Cold cuts and cured meats': 'Meat', 'Sausages': 'Meat', 'Frankfurters': 'Meat',
+  'Chicken patties, nuggets and tenders': 'Meat',
+
+  'Ice cream and frozen dairy desserts': 'Dairy',
+  'Yogurt, Greek': 'Dairy', 'Yogurt, regular': 'Dairy', 'Cheese': 'Dairy',
+
+  'Soft drinks': 'Drinks', 'Diet soft drinks': 'Drinks', 'Fruit drinks': 'Drinks',
+  'Tea': 'Drinks', 'Sport and energy drinks': 'Drinks', 'Liquor and cocktails': 'Drinks',
+  'Beer': 'Drinks', 'Wine': 'Drinks',
+
+  'Jams, syrups, toppings': 'Extras', 'Salad dressings and vegetable oils': 'Extras',
+  'Mustard and other condiments': 'Extras', 'Pasta sauces, tomato-based': 'Extras',
+  'Tomato-based condiments': 'Extras', 'Sugars and honey': 'Extras',
+  'Sugar substitutes': 'Extras', 'Mayonnaise': 'Extras', 'Soy-based condiments': 'Extras',
+
+  'Fish': 'Fish', 'Shellfish': 'Fish',
+  'Nuts and seeds': 'Beans & nuts', 'Processed soy products': 'Beans & nuts'
 };
 
 const SKIP = /baby |toddler|infant|human milk|, NS as to|^Water, |diet frozen meal|Puerto Rican|, dry mix|, dry$/i;
