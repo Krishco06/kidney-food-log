@@ -16,6 +16,9 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = process.argv[2] || path.join(__dirname, 'srdata', 'FoodData_Central_sr_legacy_food_json_2018-04.json');
+/* Optional second dataset: FNDDS "as consumed" survey foods, for composite
+ * dishes SR Legacy does not contain. Omit it and the build simply skips them. */
+const FNDDS_SRC = process.argv[3] || path.join(__dirname, 'surveydata', 'FoodData_Central_survey_food_json_2022-10-28.json');
 const OUT = path.join(__dirname, '..', 'js', 'commonfoods.js');
 
 const NUTRIENT = { 1008: 'energy', 1003: 'protein', 1093: 'sodium', 1092: 'potassium', 1091: 'phosphorus' };
@@ -492,8 +495,8 @@ const CURATED = [
   ['Prepared', 'Fried rice', /^Restaurant, Chinese, fried rice, without meat/],
   ['Prepared', 'Vegetable beef soup, canned', /^Soup, vegetable beef, canned, condensed/],
   ['Prepared', 'Cream of mushroom soup', /^Soup, cream of mushroom, canned, condensed/],
-  ['Prepared', 'Beef noodle soup', /^Soup, beef noodle, canned, condensed/],
-  ['Prepared', 'Minestrone soup', /^Soup, minestrone, canned, condensed/],
+  ['Prepared', 'Beef noodle soup, canned', /^Soup, beef noodle, canned, condensed/],
+  ['Prepared', 'Minestrone soup, canned', /^Soup, minestrone, canned, condensed/],
   ['Prepared', 'Clam chowder', /^Soup, clam chowder, new england, canned, condensed/],
   ['Prepared', 'Ramen noodle soup', /^Soup, ramen noodle, any flavor, dry/],
   ['Prepared', 'Pepperoni pizza', /^Pizza, pepperoni topping, regular crust, frozen, cooked/],
@@ -528,7 +531,7 @@ const CURATED = [
   ['Prepared', 'Cheese enchilada', /^ON THE BORDER, cheese enchilada$/],
   ['Prepared', 'Tamale, pork', /^Tamales, masa and pork filling \(Hopi\)$/],
   ['Prepared', 'BLT sandwich', /^Fast foods, submarine sandwich, bacon, lettuce, and tomato on white bread$/],
-  ['Prepared', 'Club sandwich', /^Fast foods, grilled chicken, bacon and tomato club sandwich, with cheese, lettuce, and mayonnaise$/],
+  ['Prepared', 'Grilled chicken club sandwich', /^Fast foods, grilled chicken, bacon and tomato club sandwich, with cheese, lettuce, and mayonnaise$/],
   ['Prepared', 'Philly cheesesteak', /^Fast foods, submarine sandwich, steak and cheese on white bread with cheese, lettuce and tomato$/],
   ['Prepared', 'Corn dog', /^Corn dogs, frozen, prepared$/],
   ['Prepared', 'Meatball sub', /^Fast foods, submarine sandwich, meatball marinara on white bread$/],
@@ -536,7 +539,7 @@ const CURATED = [
   ['Prepared', 'Omelet', /^Egg, whole, cooked, omelet$/],
   ['Prepared', 'Salisbury steak, frozen', /^Salisbury steak with gravy, frozen$/],
   ['Prepared', 'Fried chicken breast', /^Fast Foods, Fried Chicken, Breast, meat and skin and breading$/],
-  ['Prepared', 'Chicken and rice soup', /^Soup, chicken with rice, canned, condensed$/],
+  ['Prepared', 'Chicken and rice soup, canned', /^Soup, chicken with rice, canned, condensed$/],
 
   ['Meat', 'Chicken, roasted with skin', /^Chicken, broilers or fryers, meat and skin, cooked, roasted$/],
   ['Meat', 'Chicken breast, fried', /^Chicken, broilers or fryers, breast, meat only, cooked, fried$/],
@@ -914,18 +917,190 @@ const CURATED = [
 const GOOD_PORTION = /cup|slice|medium|large|small|piece|tbsp|tablespoon|tsp|teaspoon|oz|ounce|fl oz|serving|each|whole|can|bottle|patty|link|egg|banana|apple|potato/i;
 const BAD_PORTION = /cu in|cubic|guideline|not further specified|^1 g$|package|yields|dry, /i;
 
+/*
+ * FNDDS portions live in `portionDescription` ("1 cup", "1 piece (1/8 of
+ * 7\" x 12\")"). SR Legacy uses `modifier` for the same thing — and FNDDS
+ * ALSO has a `modifier` field, but it holds a numeric measure code. Reading
+ * the wrong one yields portions labelled "90000".
+ */
+function portionLabel(p, source) {
+  if (source === 'fndds') {
+    return String(p.portionDescription || '').replace(/\s+/g, ' ').trim();
+  }
+  return [p.amount !== 1 ? p.amount : '', p.modifier || (p.measureUnit && p.measureUnit.name) || '']
+    .join(' ').replace(/\s+/g, ' ').trim();
+}
+
+/*
+ * FNDDS — the USDA "as consumed" survey database.
+ *
+ * SR Legacy is an ingredient database: it has ground beef and flour but no
+ * shepherd's pie, which is why three expansions in a row failed to find
+ * lasagna, gyros, sushi, quiche, pot pie or gumbo. FNDDS is where composite
+ * dishes live, its names are already plain language, and 100% of its records
+ * carry a complete P/K/Na/protein/energy panel.
+ *
+ * These are values for the dish AS EATEN, which is exactly what someone
+ * logging dinner needs and what an ingredient database cannot give them.
+ */
+const CURATED_FNDDS = [
+  ['Prepared', 'Shepherd\'s pie', /^Shepherd's pie$/],
+  ['Prepared', 'Gyro sandwich', /^Gyro sandwich$/],
+  ['Prepared', 'Caesar salad, no dressing', /^Caesar salad, with romaine, no dressing$/],
+  ['Prepared', 'Sloppy joe, no bun', /^Sloppy joe, no bun$/],
+  ['Prepared', 'Quiche with meat', /^Quiche with meat, poultry or fish$/],
+  ['Prepared', 'Lo mein', /^Lo mein, NFS$/],
+  ['Prepared', 'Sushi', /^Sushi, NFS$/],
+  ['Prepared', 'Pierogi', /^Pierogi$/],
+  ['Prepared', 'Gazpacho', /^Gazpacho$/],
+  ['Prepared', 'Pot pie, beef', /^Pot pie, beef$/],
+  ['Prepared', 'Chicken salad spread', /^Chicken salad spread$/],
+  ['Prepared', 'Tuna salad with egg', /^Tuna salad with egg$/],
+  ['Prepared', 'Egg salad sandwich', /^Egg salad sandwich on white$/],
+  ['Prepared', 'Nachos', /^Nachos, NFS$/],
+  ['Prepared', 'Macaroni or noodles with cheese', /^Macaroni or noodles with cheese$/],
+  ['Prepared', 'Chili con carne with beans', /^Chili con carne with beans$/],
+  ['Prepared', 'Meatloaf sandwich', /^Meatloaf sandwich$/],
+  ['Prepared', 'Sweet and sour pork', /^Sweet and sour pork$/],
+  ['Prepared', 'Orange chicken', /^Orange chicken$/],
+  ['Prepared', 'General Tso chicken', /^General Tso chicken$/],
+  ['Prepared', 'Beef and broccoli', /^Beef and broccoli$/],
+  ['Prepared', 'Pad Thai', /^Pad Thai, NFS$/],
+  ['Prepared', 'Chicken nuggets, average', /^Chicken nuggets, NFS$/],
+  ['Prepared', 'Chicken wing, grilled with sauce', /^Chicken wing, grilled with sauce$/],
+  ['Prepared', 'Taco', /^Taco, NFS$/],
+  ['Prepared', 'Burrito', /^Burrito, NFS$/],
+  ['Prepared', 'Enchilada', /^Enchilada, NFS$/],
+  ['Prepared', 'Quesadilla', /^Quesadilla, NFS$/],
+  ['Prepared', 'Tamale', /^Tamale, NFS$/],
+  ['Prepared', 'Empanada', /^Empanada, NFS$/],
+  ['Prepared', 'Ravioli, meat-filled', /^Ravioli, meat-filled, no sauce$/],
+  ['Prepared', 'Stuffed shells, cheese-filled', /^Stuffed shells, cheese-filled, no sauce$/],
+  ['Prepared', 'Pasta salad with egg', /^Macaroni or pasta salad with egg$/],
+  ['Prepared', 'Potato salad, German style', /^Potato salad, German style$/],
+  ['Prepared', 'Coleslaw', /^Coleslaw$/],
+  ['Prepared', 'Asian chicken salad, no dressing', /^Asian chicken or turkey garden salad, chicken and\/or turkey, lettuce, fruit, nuts, no dressing$/],
+  ['Prepared', 'Cobb salad, no dressing', /^Cobb salad, no dressing$/],
+  ['Prepared', 'Club sandwich on white bread', /^Club sandwich on white$/],
+  ['Prepared', 'Grilled cheese sandwich', /^Grilled cheese sandwich, NFS$/],
+  ['Prepared', 'Peanut butter and jelly sandwich', /^Peanut butter and jelly$/],
+  ['Prepared', 'Reuben sandwich', /^Reuben sandwich$/],
+  ['Prepared', 'Chili hot dog, no bun', /^Chili hot dog, no bun$/],
+  ['Prepared', 'Cheeseburger, average', /^Cheeseburger, NFS$/],
+  ['Prepared', 'Hamburger, average', /^Hamburger, NFS$/],
+  ['Prepared', 'Barbecue chicken sandwich', /^Barbecue chicken sandwich, on white bun$/],
+  ['Prepared', 'Fish sandwich, average', /^Fish sandwich, NFS$/],
+  ['Prepared', 'Huevos rancheros', /^Huevos rancheros$/],
+  ['Prepared', 'Corned beef hash', /^Corned beef hash$/],
+  ['Prepared', 'Biscuit with gravy', /^Biscuit with gravy$/],
+  ['Prepared', 'Waffle, average', /^Waffle, NFS$/],
+  ['Prepared', 'Tuna noodle casserole', /^Tuna noodle casserole with mushroom sauce$/],
+  ['Prepared', 'Stuffed pepper, with meat', /^Stuffed pepper, with meat$/],
+  ['Prepared', 'Stuffed cabbage rolls', /^Stuffed cabbage rolls with beef and rice$/],
+  ['Prepared', 'Beef and vegetable stir fry', /^Stir fried beef and vegetables in soy sauce$/],
+  ['Prepared', 'Jambalaya', /^Jambalaya with meat and rice$/],
+  ['Prepared', 'Shrimp gumbo', /^Shrimp gumbo$/],
+  ['Prepared', 'Paella', /^Paella, NFS$/],
+  ['Prepared', 'Salisbury steak with gravy', /^Salisbury steak with gravy$/],
+  ['Prepared', 'Swiss steak', /^Swiss steak$/],
+  ['Prepared', 'Eggplant parmesan', /^Eggplant parmesan casserole, regular$/],
+  ['Prepared', 'Hummus, plain', /^Hummus, plain$/],
+  ['Prepared', 'Tabbouleh', /^Tabbouleh$/],
+  ['Prepared', 'Egg roll, meatless', /^Egg roll, meatless$/],
+  ['Prepared', 'Dumpling, no meat', /^Dumpling, no meat$/],
+  ['Prepared', 'Wonton soup', /^Wonton soup$/],
+  ['Prepared', 'Hot and sour soup', /^Hot and sour soup$/],
+  ['Prepared', 'Pho', /^Pho$/],
+  ['Prepared', 'Matzo ball soup', /^Matzo ball soup$/],
+  ['Prepared', 'Tomato soup, average', /^Tomato soup, NFS$/],
+  ['Prepared', 'Vegetable soup, home recipe', /^Vegetable soup, home recipe$/],
+  ['Prepared', 'Potato soup', /^Potato soup, prepared with water$/],
+  ['Prepared', 'Potato and cheese soup', /^Potato and cheese soup$/],
+  ['Prepared', 'Chicken and rice soup, home recipe', /^Chicken or turkey rice soup, home recipe$/],
+  ['Prepared', 'Beef noodle soup, home recipe', /^Beef noodle soup, home recipe$/],
+  ['Prepared', 'French onion soup', /^Onion soup, French$/],
+  ['Prepared', 'Egg drop soup', /^Egg drop soup$/],
+  ['Prepared', 'Split pea soup', /^Split pea soup$/],
+  ['Prepared', 'Lentil soup', /^Lentil soup, home recipe, canned, or ready-to-serve$/],
+  ['Prepared', 'Minestrone soup, home recipe', /^Minestrone soup, home recipe$/],
+  ['Prepared', 'Pizza, cheese, stuffed crust', /^Pizza, cheese, stuffed crust$/],
+  ['Prepared', 'Calzone with meat and cheese', /^Calzone, with meat and cheese$/],
+  ['Prepared', 'Lasagna, meatless', /^Lasagna, meatless$/],
+  ['Prepared', 'Manicotti, cheese-filled', /^Manicotti, cheese-filled, no sauce$/],
+  ['Prepared', 'Mozzarella sticks', /^Mozzarella sticks, breaded, baked, or fried$/],
+  ['Prepared', 'Baked beans', /^Baked beans$/],
+  ['Prepared', 'Refried beans', /^Refried beans$/],
+  ['Prepared', 'Beans and rice, with meat', /^Beans and rice, with meat$/],
+  ['Prepared', 'Green bean casserole', /^Green bean casserole$/],
+  ['Prepared', 'Ceviche', /^Ceviche$/],
+  ['Prepared', 'Crab cake sandwich', /^Crab cake sandwich$/],
+  ['Prepared', 'Shrimp scampi', /^Shrimp scampi$/],
+  ['Prepared', 'Clam chowder, Manhattan', /^Clam chowder, Manhattan$/],
+  ['Prepared', 'Beef brisket, as eaten', /^Beef, brisket$/],
+  ['Prepared', 'Ribs', /^Ribs, NFS$/],
+  ['Prepared', 'Meatball, meatless', /^Meatball, meatless$/],
+  ['Prepared', 'Beef shish kabob', /^Beef shish kabob with vegetables, excluding potatoes$/],
+  ['Prepared', 'Samosa', /^Samosa$/],
+  ['Prepared', 'Congee', /^Congee$/],
+  ['Prepared', 'Bibimbap', /^Bibimbap, Korean$/],
+  ['Prepared', 'Dal', /^Dal$/],
+  ['Prepared', 'Burrito bowl', /^Burrito bowl, NFS$/],
+
+  ['Snacks', 'Banana pudding', /^Banana pudding$/],
+  ['Snacks', 'Tiramisu', /^Tiramisu$/],
+  ['Snacks', 'Churros', /^Churros$/],
+  ['Snacks', 'Funnel cake', /^Funnel cake with sugar$/],
+  ['Snacks', 'Apple cobbler', /^Cobbler, apple$/],
+  ['Snacks', 'Fruit turnover', /^Turnover, fruit$/],
+  ['Snacks', 'Nutrition bar', /^Nutrition bar \(Clif Bar\)$/],
+  ['Snacks', 'Cereal or granola bar', /^Cereal or Granola bar, NFS$/],
+  ['Snacks', 'Meal replacement bar', /^Nutrition bar or meal replacement bar, NFS$/],
+  ['Snacks', 'Ice cream sandwich', /^Ice cream sandwich, vanilla$/],
+  ['Snacks', 'Ice cream cone', /^Ice cream cone, NFS$/],
+
+  ['Drinks', 'Vegetable smoothie', /^Vegetable smoothie$/],
+  ['Drinks', 'Malted milkshake', /^Milk shake with malt$/],
+  ['Drinks', 'Cappuccino', /^Coffee, Cappuccino$/],
+  ['Drinks', 'Iced coffee', /^Iced Coffee, brewed$/],
+  ['Drinks', 'Horchata', /^Horchata beverage, made with milk$/],
+  ['Drinks', 'Kombucha', /^Tea, kombucha$/],
+  ['Drinks', 'Hot chocolate, ready to drink', /^Hot chocolate \/ Cocoa, ready to drink$/],
+
+  ['Extras', 'Alfredo sauce', /^Alfredo sauce$/],
+  ['Extras', 'Curry sauce', /^Curry sauce$/]
+];
+
 function main() {
   const raw = JSON.parse(fs.readFileSync(SRC, 'utf8'));
-  const foods = raw.SRLegacyFoods || [];
+  const srFoods = (raw.SRLegacyFoods || []).map((f) => { f._source = 'sr'; return f; });
 
-  const byDesc = foods.slice().sort((a, b) => a.description.length - b.description.length);
+  /*
+   * FNDDS (the "as consumed" survey database) is a second source, used only
+   * for composite dishes. SR Legacy is an ingredient database: it has flour and
+   * ground beef but no shepherd's pie, which is why every previous expansion
+   * failed to find lasagna, gyros, sushi, quiche or pot pie. FNDDS has all of
+   * them, already plainly named, and 100% of its records carry a complete
+   * P/K/Na/protein/energy panel.
+   */
+  let fnddsFoods = [];
+  if (FNDDS_SRC && fs.existsSync(FNDDS_SRC)) {
+    const fraw = JSON.parse(fs.readFileSync(FNDDS_SRC, 'utf8'));
+    fnddsFoods = (fraw.SurveyFoods || []).map((f) => { f._source = 'fndds'; return f; });
+  }
+
+  const byDesc = srFoods.slice().sort((a, b) => a.description.length - b.description.length);
+  const fnddsByDesc = fnddsFoods.slice().sort((a, b) => a.description.length - b.description.length);
   const out = [];
   const missing = [];
   const warnings = [];
 
-  for (const [category, name, re] of CURATED) {
+  const ALL_WANTED = CURATED.map((c) => c.concat(['sr']))
+    .concat(CURATED_FNDDS.map((c) => c.concat(['fndds'])));
+
+  for (const [category, name, re, source] of ALL_WANTED) {
     /* Shortest matching description is reliably the plainest variant. */
-    const hit = byDesc.find((f) => re.test(f.description));
+    const pool = source === 'fndds' ? fnddsByDesc : byDesc;
+    const hit = pool.find((f) => re.test(f.description));
     if (!hit) { missing.push(name); continue; }
 
     const n = {};
@@ -944,8 +1119,7 @@ function main() {
 
     const portions = [];
     for (const p of (hit.foodPortions || [])) {
-      const label = [p.amount !== 1 ? p.amount : '', p.modifier || (p.measureUnit && p.measureUnit.name) || '']
-        .join(' ').replace(/\s+/g, ' ').trim();
+      const label = portionLabel(p, hit._source);
       if (!label || !GOOD_PORTION.test(label) || BAD_PORTION.test(label)) continue;
       if (!p.gramWeight || p.gramWeight < 3 || p.gramWeight > 900) continue;
       if (portions.some((x) => x.g === Math.round(p.gramWeight))) continue;
@@ -1008,7 +1182,8 @@ function main() {
       choy: 'pak-choi', kielbasa: 'polish', popsicle: 'pop', jelly: 'jellies',
       soda: 'carbonated', arugula: 'rocket',
       crawfish: 'crayfish', venison: 'deer', lychee: 'litchi',
-      cheesesteak: 'steak', breadsticks: 'sticks', surimi: 'surimi'
+      cheesesteak: 'steak', breadsticks: 'sticks', surimi: 'surimi',
+      malted: 'malt', milkshake: 'milk shake'
     };
     const content = nameWords.filter((w) => STOP.indexOf(w) === -1);
     if (content.length) {
@@ -1053,7 +1228,8 @@ function main() {
       cat: category,
       n: [n.energy, n.protein, n.sodium, n.potassium, n.phosphorus],
       p: portions,
-      src: hit.description
+      src: hit.description,
+      ds: hit._source
     });
   }
 
@@ -1064,7 +1240,8 @@ function main() {
 
   const body = out.map((f) =>
     '  [' + f.id + ',' + JSON.stringify(f.name) + ',' + JSON.stringify(f.cat) + ',' +
-    JSON.stringify(f.n) + ',' + JSON.stringify(f.p.map((x) => [x.label, x.g])) + ',' + JSON.stringify(f.src) + ']'
+    JSON.stringify(f.n) + ',' + JSON.stringify(f.p.map((x) => [x.label, x.g])) + ',' +
+    JSON.stringify(f.src) + ',' + JSON.stringify(f.ds) + ']'
   ).join(',\n');
 
   const js = `/*
@@ -1113,7 +1290,11 @@ ${body}
     return {
       id: 'usda:' + row[0],
       source: 'usda',
-      dataType: 'SR Legacy',
+      /* Which USDA dataset the numbers came from. SR Legacy is analysed whole
+       * foods; FNDDS is the "as consumed" survey database, which is where the
+       * composite dishes live. Shown in search results so the difference is
+       * visible rather than blended away. */
+      dataType: row[6] === 'fndds' ? 'FNDDS' : 'SR Legacy',
       name: row[1],
       brand: '',
       barcode: '',
@@ -1177,7 +1358,9 @@ ${body}
   fs.writeFileSync(OUT, js, 'utf8');
 
   console.log('wrote ' + OUT);
-  console.log('foods: ' + out.length + ' / ' + CURATED.length + ' requested');
+  console.log('foods: ' + out.length + ' / ' + ALL_WANTED.length + ' requested' +
+    '  (SR Legacy ' + out.filter((f) => f.ds === 'sr').length +
+    ', FNDDS ' + out.filter((f) => f.ds === 'fndds').length + ')');
   console.log('size:  ' + (fs.statSync(OUT).size / 1024).toFixed(1) + ' KB');
   console.log('categories: ' + cats.join(', '));
   if (noPortion.length) {

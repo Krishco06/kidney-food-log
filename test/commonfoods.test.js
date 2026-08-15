@@ -5,7 +5,7 @@
  *
  * This is shipped DATA, not logic, and the user acts on it directly, so the
  * tests are mostly invariants about the data itself. The failure that matters
- * is a plausible-looking wrong number: nobody can eyeball 789 potassium values,
+ * is a plausible-looking wrong number: nobody can eyeball 910 potassium values,
  * so the guards have to.
  */
 
@@ -30,7 +30,7 @@ var ALL = C.all();
  * ------------------------------------------------------------------ */
 
 test('library is non-trivial and every row is well formed', function () {
-  assert(C.count >= 750, 'expected a useful library, got ' + C.count);
+  assert(C.count >= 850, 'expected a useful library, got ' + C.count);
   assert(ALL.length === C.count);
   ALL.forEach(function (f) {
     assert(typeof f.name === 'string' && f.name.length > 1, 'bad name: ' + f.name);
@@ -281,6 +281,46 @@ test('library foods report no ingredient scan, which is not the same as clean', 
   ALL.forEach(function (f) {
     assert(f.scan && f.scan.scanned === false, f.name + ' should be scanned:false');
     assert(f.scan.findings.length === 0);
+  });
+});
+
+test('composite dishes come from FNDDS, whole foods from SR Legacy', function () {
+  /*
+   * SR Legacy is an ingredient database — it has ground beef and flour but no
+   * shepherd's pie. Three expansions failed to find lasagna, gyros, sushi or
+   * pot pie for exactly that reason. FNDDS is the "as consumed" survey
+   * database, and its values are for the dish as eaten, which is what someone
+   * logging dinner actually needs.
+   */
+  var dishes = ['Shepherd\'s pie', 'Gyro sandwich', 'Sushi', 'Pho', 'Tamale', 'Pierogi'];
+  dishes.forEach(function (name) {
+    var f = ALL.filter(function (x) { return x.name === name; })[0];
+    assert(f, 'missing composite dish: ' + name);
+    assert(f.dataType === 'FNDDS', name + ' should come from FNDDS, got ' + f.dataType);
+  });
+
+  var whole = ['Banana', 'Chicken breast, roasted', 'Whole milk'];
+  whole.forEach(function (name) {
+    var f = ALL.filter(function (x) { return x.name === name; })[0];
+    assert(f && f.dataType === 'SR Legacy', name + ' should come from SR Legacy');
+  });
+});
+
+test('canned and home-recipe versions of a dish are both kept, and distinguishable', function () {
+  /*
+   * Not accidental duplicates. Canned condensed soup carries roughly twice the
+   * sodium of the home-recipe version, and sodium is one of the five tracked
+   * nutrients — so both ship and each name says which it is.
+   */
+  var pairs = [['Beef noodle soup, canned', 'Beef noodle soup, home recipe'],
+               ['Minestrone soup, canned', 'Minestrone soup, home recipe']];
+  pairs.forEach(function (pair) {
+    var canned = ALL.filter(function (x) { return x.name === pair[0]; })[0];
+    var home = ALL.filter(function (x) { return x.name === pair[1]; })[0];
+    assert(canned && home, 'missing one of ' + pair.join(' / '));
+    assert(canned.nutrients.sodium > home.nutrients.sodium,
+      pair[0] + ' (' + canned.nutrients.sodium + ') should out-salt ' +
+      pair[1] + ' (' + home.nutrients.sodium + ')');
   });
 });
 
