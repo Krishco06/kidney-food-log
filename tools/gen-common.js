@@ -1213,6 +1213,87 @@ const CURATED = [
   ['Vegetable', 'Lotus root, raw', /^Lotus root, raw$/],
   ['Vegetable', 'Taro leaves, raw', /^Taro leaves, raw$/],
   ['Vegetable', 'Taro shoots, raw', /^Taro shoots, raw$/],
+
+  /* ---------------------------------------------------------------- *
+   * The tail of SR Legacy.
+   *
+   * A depth-200 sweep returned 233 candidates, of which 149 were raw or
+   * commodity forms — "Salmon, chum, raw", "Beans, pinto, mature seeds,
+   * raw", "Wheat, hard red winter". None of those is a meal, and each
+   * shadows an entry already shipped in its cooked form, so the miner's
+   * raw filter was widened from Meat-only to every group.
+   *
+   * What survives is the genuinely useful remainder: more cooked fish,
+   * sausages, masa and cake flour, canned and sauteed vegetables.
+   * ---------------------------------------------------------------- */
+
+  ['Drinks', 'Hard lemonade', /^Alcoholic beverage, malt beer, hard lemonade$/],
+  ['Drinks', 'Limeade soda, high caffeine', /^Beverages, carbonated, limeade, high caffeine$/],
+  ['Drinks', 'Creme de menthe', /^Alcoholic beverage, creme de menthe, 72 proof$/],
+  ['Drinks', 'Coffee liqueur', /^Alcoholic beverage, liqueur, coffee, 63 proof$/],
+  ['Drinks', 'Malted chocolate drink mix', /^Beverages, malted drink mix, chocolate, powder$/],
+  ['Drinks', 'Green tea, bottled, sweetened', /^Beverages, tea, green, ready-to-drink, sweetened$/],
+  ['Drinks', 'Whiskey', /^Alcoholic beverage, distilled, whiskey, 86 proof$/],
+  ['Drinks', 'Daiquiri, homemade', /^Alcoholic beverage, daiquiri, prepared-from-recipe$/],
+  ['Drinks', 'Green tea, bottled, unsweetened', /^Beverages, tea, green, ready to drink, unsweetened$/],
+  ['Drinks', 'Instant tea, decaf', /^Beverages, tea, instant, decaffeinated, unsweetened$/],
+  ['Grains', 'Barley flour', /^Barley flour or meal$/],
+  ['Grains', 'Vegetable macaroni, cooked', /^Macaroni, vegetable, enriched, cooked$/],
+  ['Grains', 'Egg pasta, homemade', /^Pasta, homemade, made with egg, cooked$/],
+  ['Grains', 'Fresh pasta, cooked', /^Pasta, fresh-refrigerated, plain, cooked$/],
+  ['Grains', 'Corn flour, whole grain', /^Corn flour, whole-grain, yellow$/],
+  ['Grains', 'Masa harina, white', /^Corn flour, masa, enriched, white$/],
+  ['Grains', 'Cake flour', /^Wheat flour, white, cake, enriched$/],
+  ['Grains', 'Masa harina, yellow', /^Corn flour, yellow, masa, enriched$/],
+  ['Grains', 'Whole wheat pastry flour', /^Wheat flour, whole-grain, soft wheat$/],
+  ['Grains', 'Steamed white rice, restaurant', /^Rice, white, steamed, Chinese restaurant$/],
+  ['Grains', 'Crunchy chow mein noodles', /^Noodles, flat, crunchy, Chinese restaurant$/],
+  ['Fish', 'Wolffish, cooked', /^Fish, wolffish, Atlantic, cooked, dry heat$/],
+  ['Fish', 'Bluefin tuna, cooked', /^Fish, tuna, fresh, bluefin, cooked, dry heat$/],
+  ['Fish', 'Skipjack tuna, cooked', /^Fish, tuna, skipjack, fresh, cooked, dry heat$/],
+  ['Fish', 'Yellowfin tuna, cooked', /^Fish, tuna, yellowfin, fresh, cooked, dry heat$/],
+  ['Fish', 'Sea trout, cooked', /^Fish, seatrout, mixed species, cooked, dry heat$/],
+  ['Fish', 'Whitefish, cooked', /^Fish, whitefish, mixed species, cooked, dry heat$/],
+  ['Fish', 'Salmon nuggets, breaded', /^Salmon nuggets, breaded, frozen, heated$/],
+  ['Fish', 'Yellowtail, cooked', /^Fish, yellowtail, mixed species, cooked, dry heat$/],
+  ['Fish', 'Croaker, breaded and fried', /^Fish, croaker, Atlantic, cooked, breaded and fried$/],
+  ['Fish', 'Sturgeon, smoked', /^Fish, sturgeon, mixed species, smoked$/],
+  ['Fish', 'Whitefish, smoked', /^Fish, whitefish, mixed species, smoked$/],
+  ['Fish', 'Cod, canned', /^Fish, cod, Atlantic, canned, solids and liquid$/],
+  /* Gefilte fish is already shipped from FNDDS, whose value is for the dish as
+   * eaten — the better fit for a prepared food than SR's commercial record. */
+  ['Fish', 'Crab cakes, homemade', /^Crustaceans, crab, blue, crab cakes, home recipe$/],
+  ['Fruit', 'Maraschino cherries, canned, drained', /^Maraschino cherries, canned, drained$/],
+  ['Fruit', 'Black olives, jumbo', /^Olives, ripe, canned \(jumbo-super colossal\)$/],
+  ['Fruit', 'Figs, canned in water', /^Figs, canned, water pack, solids and liquids$/],
+  ['Fruit', 'Prunes, stewed', /^Prunes, dehydrated \(low-moisture\), stewed$/],
+  ['Fruit', 'Apples, frozen, cooked', /^Apples, frozen, unsweetened, heated \(Includes foods for USDA's Food Distribution Program\)$/],
+  ['Beans & nuts', 'Great northern beans, canned', /^Beans, great northern, mature seeds, canned$/],
+  ['Beans & nuts', 'Soy nuts, roasted and salted', /^Soybeans, mature seeds, roasted, salted$/],
+  ['Beans & nuts', 'Soy milk, unfortified', /^Soymilk, original and vanilla, unfortified$/],
+  ['Meat', 'Turkey, diced and seasoned', /^Turkey, diced, light and dark meat, seasoned$/],
+  ['Meat', 'Italian sausage links, sweet', /^Sausage, Italian, sweet, links$/],
+  ['Meat', 'Italian turkey sausage, smoked', /^Sausage, Italian, turkey, smoked$/],
+  ['Meat', 'Smoked pork sausage links', /^Sausage, smoked link sausage, pork$/],
+  ['Meat', 'Ham, extra lean, low sodium', /^Ham, smoked, extra lean, low sodium$/],
+  ['Meat', 'Rotisserie turkey, deli', /^Turkey, white, rotisserie, deli cut$/],
+  ['Meat', 'Dutch loaf lunch meat', /^Dutch brand loaf, chicken, pork and beef$/],
+  ['Vegetable', 'Potatoes, canned', /^Potatoes, canned, drained solids$/],
+  ['Vegetable', 'Corn pudding', /^Corn pudding, home prepared$/],
+  ['Vegetable', 'Red bell pepper, sauteed', /^Peppers, sweet, red, sauteed$/],
+  ['Vegetable', 'Potato puffs, oven-baked', /^Potato puffs, frozen, oven-heated$/],
+  ['Vegetable', 'Sun-dried chile peppers', /^Peppers, hot chile, sun-dried$/],
+  ['Vegetable', 'Candied sweet potatoes', /^Sweet potato, cooked, candied, home-prepared$/],
+  ['Vegetable', 'Green bell pepper, sauteed', /^Peppers, sweet, green, sauteed$/],
+  ['Vegetable', 'Potatoes O\'Brien, frozen', /^Potatoes, o'brien, frozen, prepared$/],
+  ['Vegetable', 'Bamboo shoots, canned', /^Bamboo shoots, canned, drained solids$/],
+  ['Vegetable', 'Potatoes O\'Brien, homemade', /^Potatoes, o'brien, home-prepared$/],
+  ['Vegetable', 'Potato, baked, flesh only', /^Potatoes, baked, flesh, without salt$/],
+  ['Vegetable', 'Mixed vegetables, canned', /^Vegetables, mixed, canned, drained solids$/],
+  ['Vegetable', 'Shellie beans, canned', /^Beans, shellie, canned, solids and liquids$/],
+  ['Vegetable', 'Hubbard squash, baked', /^Squash, winter, hubbard, baked, without salt$/],
+  ['Vegetable', 'Collard greens, cooked with salt', /^Collards, cooked, boiled, drained, with salt$/],
+  ['Vegetable', 'Potato wedges, frozen', /^Potato wedges, frozen \(Includes foods for USDA's Food Distribution Program\)$/],
 ];
 
 /* Portion measures worth showing. SR carries a lot of laboratory-flavoured

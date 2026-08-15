@@ -151,6 +151,63 @@ function score(d) {
   return s;
 }
 
+/*
+ * Rejections that must run on the DISPLAY NAME, not the raw description.
+ *
+ * These were one-off scripts for the first SR round and belong in the tool.
+ * The distinction matters: SR files game as "Game meat, beaver, cooked", so a
+ * rule anchored to the start of the raw text never sees the word that decides
+ * it. Everything here is applied after pretty() has done its work.
+ */
+
+/* SR soups, sauces and dressings lead with the qualifier, so reordering yields
+ * "Homemade, white, thick sauce" and "Beef broth, cubed, dry soup". FNDDS
+ * already supplies these with names a person recognises. */
+const AWKWARD = / (soup|sauce|dressing)$/i;
+
+/* Game nobody in a US dialysis unit is logging. Quail, pheasant and rabbit
+ * stay — they turn up in real diets; raccoon and muskrat do not. */
+const EXOTIC_GAME = /^(Bear|Moose|Horse|Beaver|Muskrat|Opossum|Raccoon|Squirrel|Antelope|Boar|Caribou|Buffalo|Jellyfish|Turtle|Snail|Whelk|Conch|Dove|Squab|Guinea hen|Ostrich|Emu)\b/i;
+
+/* Offal. Real food, but not what someone reaches for to log dinner. */
+const ORGAN = /\b(liver|heart|kidney|giblets|feet|hocks|pate|brains|testes|tongue|gizzard|sweetbread)\b/i;
+
+/* Genuine plants and commodity inputs that no one will ever search for. */
+const OBSCURE = /^(Rowal|Abiyuch|Eppaw|Pepeao|Dock|Borage|Celtuce|Cornsalad|Arrowhead|Butterbur|Tree fern|Water convolvulus|Oheloberries|Pitanga|Nance|Naranjilla|Baobab|Roselle|Rose-apples|Sugar-apples|Mammy-apple|Breadnut|Acorn flour|Sisymbrium|Meat extender|Okara|Soy meal|Papad|Lupins|Mothbeans|Mungo|Winged bean|Yardlong|Kanpyo|Epazote|Cardoon|Purslane|Lambsquarters|Chicory roots|Jute|Cress|Burdock|Salsify|Fireweed|Pokeberry|Nopales)\b/i;
+
+const EXOTIC_OIL = /^(Teaseed|Babassu|Sheanut|Cupu assu|Ucuhuba|Tomatoseed|Oat|Cocoa butter|Beef tallow|Goose|Turkey|Chicken) (oil|butter oil|fat)/i;
+
+/*
+ * People log what they ATE, which is the cooked form — and the cooked record
+ * is already in the library wherever SR has one.
+ *
+ * This started as a Meat-only rule and that was too narrow. Going deeper into
+ * SR surfaced 62 fish candidates of which most were "Salmon, chum, raw" and
+ * "Lobster, northern, raw", plus whole categories of "mature seeds, raw" dry
+ * beans and "Wheat, hard red winter" commodity grain. None of those is a meal;
+ * all of them shadow an entry already shipped in its cooked form.
+ */
+const RAW_MEAT = /, raw$|, raw,|unheated$|uncooked$|, dry$|mature seeds, raw|immature seeds, raw/i;
+
+/* Bulk commodity grain and milling fractions, not food as bought or eaten. */
+const COMMODITY = /^Wheat, (hard|soft) |^Corn grain|^Sorghum flour|^Semolina|^Barley, pearled, raw|^Oat flour|^Rice, white, (medium|short)-grain, raw|^Pasta, dry|^Noodles, .*, dry/i;
+
+/* Lab and process intermediates rather than foods. */
+const INTERMEDIATE = /^(Whey|Butter oil|Cream substitute|Dessert topping|Egg substitute, powder|Vital wheat gluten|Rice bran|Corn bran|Soy protein|Soy flour|Sesame flour|Sesame meal|Carob|Baking chocolate|Gums|Pectin|Sweeteners, tabletop|Leavening|Gelatins|Frostings|Cocoa, dry)\b/i;
+
+function rejectByName(name, group) {
+  if (AWKWARD.test(name)) return 'awkward';
+  if (EXOTIC_GAME.test(name)) return 'game';
+  if (ORGAN.test(name)) return 'organ';
+  if (OBSCURE.test(name)) return 'obscure';
+  if (EXOTIC_OIL.test(name)) return 'oil';
+  if (INTERMEDIATE.test(name)) return 'intermediate';
+  if (COMMODITY.test(name)) return 'commodity';
+  /* Applies to every group, not just Meat — see the note on RAW_MEAT. */
+  if (RAW_MEAT.test(name)) return 'raw';
+  return null;
+}
+
 const STOP = new Set(['with', 'without', 'and', 'the', 'from', 'other', 'than',
   'type', 'style', 'made', 'ready', 'eat', 'average', 'assorted', 'plain', 'raw']);
 function tokens(name) {
@@ -190,8 +247,19 @@ for (const cat of [...byCat.keys()].sort()) {
   let taken = 0;
   for (const f of list) {
     if (taken >= perCat) break;
-    const name = pretty(f.description);
+    var name = pretty(f.description);
     if (!name || name.length < 3 || name.length > 44) { drop.badName++; continue; }
+
+    const why = rejectByName(name, group);
+    if (why) { drop[why] = (drop[why] || 0) + 1; continue; }
+
+    /* Tidy USDA's own formatting residue. "dry heat" and "moist heat" are lab
+     * method notes, not something to show a reader. */
+    name = name
+      .replace(/,\s*dry heat$/, '').replace(/,\s*moist heat$/, '')
+      .replace(/\s+,/g, ',').replace(/,(\S)/g, ', $1')
+      .replace(/\s{2,}/g, ' ').trim();
+    if (name.length < 3) { drop.badName++; continue; }
 
     const t = tokens(name);
     if (!t.size) { drop.badName++; continue; }
