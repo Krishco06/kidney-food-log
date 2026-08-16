@@ -18,7 +18,7 @@
  * Only rows whose description differs from the display name are here; for the
  * rest the name IS the description, and commonfoods.js falls back to it.
  *
- * 3159 of 5841 foods.
+ * 3159 of 6010 foods.
  */
 
 (function (root) {
