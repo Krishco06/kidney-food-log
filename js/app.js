@@ -1067,8 +1067,10 @@
      * provenance line — so it deliberately does not block the render. Offline
      * this is a service-worker cache read and finishes in milliseconds.
      */
-    if (food.source === 'usda' && !food.usdaDescription) return;
+    if (food.source !== 'usda') return;
     loadDescriptions().then(function (lib) {
+      /* The user may have gone back or picked something else while this was in
+       * flight; redrawing then would replace the screen they are looking at. */
       if (!lib || state.pending !== food) return;
       var better = lib.describe(Number(String(food.id).replace('usda:', '')));
       if (better && better !== food.usdaDescription) {

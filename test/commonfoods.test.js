@@ -452,6 +452,66 @@ test('descriptions are a separate file, off the search path', function () {
     'sw.js must precache the descriptions file');
 });
 
+test('app.js actually fetches the descriptions when a portion opens', function () {
+  /*
+   * The split is only worth anything if the second file still arrives. I tried
+   * to verify this in the browser and got a false negative twice: the page was
+   * running a disk-cached app.js, so the loader I had just written was not the
+   * loader executing. Testing the logic here instead means the disk cache
+   * cannot lie about it.
+   *
+   * This lifts the real loader out of app.js and runs it against a stub
+   * document, checking that it injects the right file and resolves with the
+   * library once that file registers itself.
+   */
+  var fs = require('fs');
+  var path = require('path');
+  var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+
+  var m = src.match(/var descPromise = null;[\s\S]*?\n  \}\n/);
+  assert(m, 'loadDescriptions() not found in app.js');
+  assert(/loadDescriptions\(\)\.then/.test(src),
+    'openPortion must call loadDescriptions(), or the provenance line never appears');
+
+  /*
+   * Everything below is synchronous on purpose. The test harness is
+   * `try { fn(); passed++; }`, so a test that returns a promise is counted as
+   * passing before its assertions run — the first version of this test was a
+   * false green for exactly that reason. A Promise executor runs synchronously,
+   * so the appendChild has already happened by the time loadDescriptions()
+   * returns, and that is the part worth asserting.
+   */
+  /*
+   * A FRESH library instance, because this file requires the descriptions at
+   * the top and the loader correctly short-circuits when they are already
+   * registered. Handing it the module-level `C` tested nothing — it took the
+   * early-return path every time.
+   */
+  delete require.cache[require.resolve('../js/commonfoods.js')];
+  var fresh = require('../js/commonfoods.js');
+  assert(!fresh.descriptionsLoaded(), 'a fresh library should start without descriptions');
+
+  var appended = null;
+  var doc = {
+    createElement: function () { return {}; },
+    head: { appendChild: function (s) { appended = s; } }
+  };
+  var loadDescriptions =
+    new Function('CommonFoods', 'document', m[0] + '; return loadDescriptions;')(fresh, doc);
+
+  loadDescriptions();
+  assert(appended, 'loadDescriptions() injected nothing');
+  assert(appended.src === 'js/commonfoods-desc.js',
+    'should inject the descriptions file, got ' + appended.src);
+  assert(typeof appended.onload === 'function' && typeof appended.onerror === 'function',
+    'both handlers must be set, or a missing file hangs the portion screen');
+
+  /* And the file it asks for must actually register descriptions back. */
+  assert(C.descriptionsLoaded(), 'descriptions should be registered by now');
+  assert(C.describe(173944) === 'Bananas, raw',
+    'describe() should return the verbatim USDA record, got ' + C.describe(173944));
+});
+
 test('the library is NOT loaded at startup', function () {
   /*
    * The contract that makes the size limit generous: index.html must not have
