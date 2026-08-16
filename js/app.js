@@ -502,8 +502,16 @@
    * query, a failed online lookup is a footnote, not a failure — so the wording
    * has to change rather than telling someone staring at ten usable results
    * that nothing could be found.
+   *
+   * `onlineCount` matters for the same reason one level down. Search fans out
+   * to TWO online sources, and when one of them fails while the other returns
+   * results, the softened notice used to say "the foods above are from the
+   * built-in list" directly underneath fifty rows labelled "50 more from
+   * online". Both halves of that sentence were false. In an app whose whole
+   * claim is that it does not misstate what it knows, a misleading status
+   * message is not a cosmetic bug.
    */
-  function renderSearchErrors(host, errors, resultCount) {
+  function renderSearchErrors(host, errors, resultCount, onlineCount) {
     /*
      * At most ONE notice, even when several sources failed.
      *
@@ -521,6 +529,19 @@
 
     if (pick) {
       var n = el('div', 'notice strong');
+      /* Some online results DID arrive; only one of the two sources failed.
+       * Say that, rather than describing results that are on screen as absent. */
+      if (onlineCount) {
+        n.className = 'notice';
+        n.appendChild(el('h3', null, 'One food source did not answer'));
+        n.appendChild(el('p', null,
+          'The results above are real and ready to use. One of the two online ' +
+          'sources did not respond, so a few packaged foods may be missing from ' +
+          'this list.'));
+        host.appendChild(n);
+        return true;
+      }
+
       /* Softened when the built-in list already answered: the search worked,
        * we just could not add the online extras. */
       if (resultCount) {
@@ -566,7 +587,7 @@
     if (foods.length) {
       foods.forEach(function (food) { host.appendChild(foodRow(food)); });
     }
-    renderSearchErrors(host, errors, foods.length);
+    renderSearchErrors(host, errors, foods.length, foods.length);
   }
 
   /* ------------------------------------------------------------------ *
@@ -669,10 +690,10 @@
         host.appendChild(sectionHeading(online.length + ' more from online'));
         online.forEach(function (f) { host.appendChild(foodRow(f)); });
       }
-      renderSearchErrors(host, r.errors, local.length + online.length);
+      renderSearchErrors(host, r.errors, local.length + online.length, online.length);
     }).catch(function () {
       if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
-      renderSearchErrors(host, [{ code: 'GENERIC' }], local.length);
+      renderSearchErrors(host, [{ code: 'GENERIC' }], local.length, 0);
     });
   }
 
