@@ -445,6 +445,27 @@ test('corpus: MATERIAL potassium is perfectly precise', function () {
     'recall ' + s.recall.toFixed(3) + '; missed: ' + JSON.stringify(s.falseNeg));
 });
 
+test('enhanced-meat phrasing names the solution, not a phantom additive', function () {
+  /*
+   * Regression guard. The meat-solution indicator is dual-mineral because
+   * injected brine usually carries both, and counting it in the headline made
+   * a pork loin read "Found 1 potassium additive" — naming a specific additive
+   * the label never listed, and burying the useful fact that a solution was
+   * added at all.
+   */
+  ['Pork, Contains up to 12% solution of Water, Salt',
+   'Turkey, Self-Basting with Broth'
+  ].forEach(function (t) {
+    var s = scanner.summarize(scanner.scan(t));
+    assert(/added solution/.test(s), 'should describe the solution: ' + s);
+    assert(!/Found \d+ potassium/.test(s), 'must not invent an additive count: ' + s);
+  });
+  /* But a real phosphate on the same label still leads. */
+  var r = scanner.scan('Chicken, Contains up to 15% solution of Water, Salt, Sodium Phosphates');
+  assert(/Found 1 phosphorus additive/.test(scanner.summarize(r)),
+    'a listed phosphate should still lead: ' + scanner.summarize(r));
+});
+
 test('corpus: lecithin and nucleotides never drive the headline', function () {
   /*
    * Picard et al. 2023: lecithin-only products had LOWER median phosphorus

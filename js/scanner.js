@@ -468,8 +468,16 @@
     var p = result.inorganicPhosphate.filter(function (f) {
       return f.confidence !== 'possible';
     }).length;
+    /*
+     * Process indicators are excluded from the counts. "Contains up to 12%
+     * solution" is dual-mineral because the injected brine usually carries
+     * both, but counting it produced "Found 1 potassium additive" on a pork
+     * loin — naming a specific additive the label never listed, and burying
+     * the more useful fact that a solution was added at all. That case is
+     * described in its own sentence below.
+     */
     var k = result.materialPotassium.filter(function (f) {
-      return f.confidence !== 'possible';
+      return f.confidence !== 'possible' && f.klass !== 'process-indicator';
     }).length;
     if (p) parts.push(p + ' phosphorus ' + (p === 1 ? 'additive' : 'additives'));
     if (k) parts.push(k + ' potassium ' + (k === 1 ? 'additive' : 'additives'));
