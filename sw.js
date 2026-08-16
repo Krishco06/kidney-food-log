@@ -11,7 +11,7 @@
  */
 
 /* Bump on every shell change so returning users pick up the new bundle. */
-var CACHE = 'kidney-food-log-v12';
+var CACHE = 'kidney-food-log-v14';
 
 var SHELL = [
   './',
@@ -19,6 +19,7 @@ var SHELL = [
   'css/app.css',
   'js/additives.js',
   'js/commonfoods.js',
+  'js/commonfoods-desc.js',
   'js/scanner.js',
   'js/barcode.js',
   'js/units.js',

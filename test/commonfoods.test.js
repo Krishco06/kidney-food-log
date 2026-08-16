@@ -5,13 +5,21 @@
  *
  * This is shipped DATA, not logic, and the user acts on it directly, so the
  * tests are mostly invariants about the data itself. The failure that matters
- * is a plausible-looking wrong number: nobody can eyeball 5,552 potassium values,
+ * is a plausible-looking wrong number: nobody can eyeball 5,841 potassium values,
  * so the guards have to.
  */
 
 'use strict';
 
 var C = require('../js/commonfoods.js');
+/*
+ * The verbatim USDA descriptions live in a companion file that the browser
+ * loads lazily on the portion screen. Requiring it here registers it with the
+ * library, so these tests see the same data a user does once that screen has
+ * been opened — and the provenance assertions below still have something to
+ * assert against.
+ */
+require('../js/commonfoods-desc.js');
 var Foods = require('../js/foods.js');
 
 var passed = 0;
@@ -30,7 +38,7 @@ var ALL = C.all();
  * ------------------------------------------------------------------ */
 
 test('library is non-trivial and every row is well formed', function () {
-  assert(C.count >= 5450, 'expected a useful library, got ' + C.count);
+  assert(C.count >= 5750, 'expected a useful library, got ' + C.count);
   assert(ALL.length === C.count);
   ALL.forEach(function (f) {
     assert(typeof f.name === 'string' && f.name.length > 1, 'bad name: ' + f.name);
@@ -387,12 +395,16 @@ test('the library is small enough to ship in an offline PWA', function () {
    * below is the real one, because what matters is how long the Add screen
    * takes to appear, not how many bytes it is.
    *
-   * THE STRUCTURAL FIX IS KNOWN AND NOT DONE YET. Field-level measurement
-   * says `usdaDescription` is ~26% of the file, and it is read on exactly one
-   * screen, for one food at a time — the portion picker's provenance line.
-   * Splitting it into a companion file loaded on that screen would return
-   * roughly a quarter of these bytes without dropping a single food. The next
-   * expansion should do that rather than raise this number again.
+   * THE STRUCTURAL FIX IS NOW DONE. `usdaDescription` was ~26% of this file
+   * and is read on exactly one screen for one food at a time, so it moved to
+   * commonfoods-desc.js, which the portion picker loads on demand. That took
+   * the library from 605 KB to 471 KB and the parse from 29 ms to 15 ms
+   * without dropping a single food.
+   *
+   * So this ceiling now has real headroom, and the next expansion can spend
+   * it. When it runs out again the answer is NOT another split — it is that
+   * the library has outgrown a JS literal and wants a binary format or an
+   * index, which is a different piece of work.
    */
   var bytes = require('fs').statSync(require.resolve('../js/commonfoods.js')).size;
   assert(bytes < 650 * 1024,
@@ -410,6 +422,34 @@ test('the library is small enough to ship in an offline PWA', function () {
   C.all().forEach(function (f) { return f.nutrients.potassium; });
   var ms = Date.now() - t0;
   assert(ms < 400, 'decoding ' + C.count + ' rows took ' + ms + ' ms');
+});
+
+test('descriptions are a separate file, off the search path', function () {
+  /*
+   * The whole point of the split. If commonfoods-desc.js ever gets a script
+   * tag, or gets concatenated back into the library, the 163 KB it holds
+   * returns to the Add screen's parse cost to support one line on the portion
+   * screen — and it would do so silently, because nothing would break.
+   */
+  var fs = require('fs');
+  var path = require('path');
+
+  var descPath = path.join(__dirname, '..', 'js', 'commonfoods-desc.js');
+  assert(fs.existsSync(descPath), 'commonfoods-desc.js should be generated');
+
+  var html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert(!/<script[^>]*commonfoods-desc/i.test(html),
+    'index.html must not load the descriptions eagerly');
+
+  var lib = fs.readFileSync(require.resolve('../js/commonfoods.js'), 'utf8');
+  assert(lib.indexOf('usdaDescription: row[') === -1,
+    'the library must not carry descriptions in its rows again');
+
+  /* Offline it must still be reachable, or the provenance line vanishes on
+   * exactly the connection this app was built for. */
+  var sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+  assert(sw.indexOf('js/commonfoods-desc.js') !== -1,
+    'sw.js must precache the descriptions file');
 });
 
 test('the library is NOT loaded at startup', function () {

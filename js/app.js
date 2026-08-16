@@ -36,6 +36,30 @@
   var CommonFoods = null;
   var commonFoodsPromise = null;
 
+  /*
+   * The verbatim USDA descriptions are a second, larger file, loaded only when
+   * the portion screen opens. They power one line — "USDA record: ..." — which
+   * exists so a mis-binding is visible to the user rather than silent. Worth
+   * having; not worth parsing on the Add screen, where it is never read.
+   */
+  var descPromise = null;
+  function loadDescriptions() {
+    if (descPromise) return descPromise;
+    descPromise = new Promise(function (resolve) {
+      if (!CommonFoods) { resolve(null); return; }
+      if (CommonFoods.descriptionsLoaded()) { resolve(CommonFoods); return; }
+      var s = document.createElement('script');
+      s.src = 'js/commonfoods-desc.js';
+      s.async = true;
+      /* A failure here costs the provenance line and nothing else, so it
+       * resolves rather than rejects — the portion screen must still work. */
+      s.onload = function () { resolve(CommonFoods); };
+      s.onerror = function () { resolve(null); };
+      document.head.appendChild(s);
+    });
+    return descPromise;
+  }
+
   function loadCommonFoods() {
     if (commonFoodsPromise) return commonFoodsPromise;
     commonFoodsPromise = new Promise(function (resolve, reject) {
@@ -1036,6 +1060,22 @@
     state.grams = food.servingGrams || 100;
     renderPortion();
     show('portion');
+
+    /*
+     * Pull in the USDA descriptions and redraw once they arrive. The screen is
+     * fully usable before this resolves — the only thing missing is the
+     * provenance line — so it deliberately does not block the render. Offline
+     * this is a service-worker cache read and finishes in milliseconds.
+     */
+    if (food.source === 'usda' && !food.usdaDescription) return;
+    loadDescriptions().then(function (lib) {
+      if (!lib || state.pending !== food) return;
+      var better = lib.describe(Number(String(food.id).replace('usda:', '')));
+      if (better && better !== food.usdaDescription) {
+        food.usdaDescription = better;
+        renderPortion();
+      }
+    });
   }
 
   function renderPortion() {
