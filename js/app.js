@@ -283,7 +283,19 @@
     return b;
   }
 
-  function absorptionBadge(organic) {
+  /*
+   * The absorption axis is a statement about PHOSPHORUS: added phosphate is
+   * absorbed at ~90-100%, the phosphorus naturally in food at ~40-60%. It has
+   * no meaning for potassium, which is absorbed almost completely whatever
+   * form it arrives in.
+   *
+   * Rendering it on a potassium-only finding produced "Potassium sorbate —
+   * Added, almost fully absorbed", which reads as alarming and is doubly
+   * wrong: sorbate is a trace preservative, and the badge was never about
+   * potassium in the first place. Returns null when it does not apply.
+   */
+  function absorptionBadge(organic, minerals) {
+    if (minerals && minerals.indexOf('phosphorus') === -1) return null;
     var b = el('span', 'badge ' + (organic ? 'low' : 'high'));
     b.textContent = organic
       ? 'Natural — about half absorbed'
@@ -314,7 +326,8 @@
       name.appendChild(el('span', null, a.name));
       name.appendChild(mineralBadge(a.minerals));
       name.appendChild(loadBadge(a.load));
-      name.appendChild(absorptionBadge(a.organic));
+      var absA = absorptionBadge(a.organic, a.minerals);
+      if (absA) name.appendChild(absA);
       if (a.confidence === 'possible') {
         var q = el('span', 'badge unknown');
         q.textContent = '? Not certain';
@@ -324,6 +337,15 @@
 
       var full = window.RenalAdditives.byId[a.id];
       if (full) node.appendChild(el('div', 'note', full.note));
+
+      /*
+       * The E number, where there is one. It is the one identifier that
+       * survives translation and reformulation, so it is what someone can
+       * actually carry to a dietitian or match against another package.
+       */
+      if (full && full.eNumber) {
+        node.appendChild(el('div', 'src', full.eNumber));
+      }
 
       node.appendChild(el('div', 'where', 'In: ' + a.foods.join(', ')));
       host.appendChild(node);
@@ -1144,7 +1166,8 @@
         name.appendChild(el('span', null, f.name));
         name.appendChild(mineralBadge(f.minerals));
         name.appendChild(loadBadge(f.load));
-        name.appendChild(absorptionBadge(f.organic));
+        var absF = absorptionBadge(f.organic, f.minerals);
+        if (absF) name.appendChild(absF);
         node.appendChild(name);
         node.appendChild(el('div', 'note', f.note));
         node.appendChild(el('div', 'src', 'Found in the ingredients: ' + f.sources.join('; ')));
