@@ -106,7 +106,14 @@
       findings: scan.findings.map(function (f) {
         return {
           id: f.id, name: f.name, minerals: f.minerals,
-          load: f.load, confidence: f.confidence, organic: !!f.organic
+          load: f.load, confidence: f.confidence, organic: !!f.organic,
+          /*
+           * The class travels with the entry because entries are SNAPSHOTS.
+           * A later dictionary revision must not silently re-tier what is
+           * already in someone's log — the same reason nutrient values are
+           * frozen here rather than looked up on read.
+           */
+          klass: f.klass || null
         };
       })
     };
@@ -220,6 +227,7 @@
             additiveMap[f.id] = {
               id: f.id, name: f.name, minerals: f.minerals,
               load: f.load, confidence: f.confidence, organic: !!f.organic,
+              klass: f.klass || null,
               count: 0, foods: []
             };
           }

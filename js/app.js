@@ -318,8 +318,27 @@
    * wrong: sorbate is a trace preservative, and the badge was never about
    * potassium in the first place. Returns null when it does not apply.
    */
-  function absorptionBadge(organic, minerals) {
+  /*
+   * How completely the body takes this phosphorus up — the axis that makes
+   * additive phosphorus worth flagging at all.
+   *
+   * This used to be a boolean on `organic`, which meant anything not marked
+   * organic got "Added — almost fully absorbed". That put the strongest claim
+   * in the app next to "? Not certain" on a modified food starch, where the
+   * phosphorus is a cross-link at trace levels and we cannot even confirm it
+   * is present. Two overstatements stacked on the one row least able to
+   * support them.
+   *
+   * So it keys off the class now, and says nothing where nothing certain can
+   * be said. A missing badge is honest; a confident wrong one is not.
+   */
+  function absorptionBadge(organic, minerals, klass) {
     if (minerals && minerals.indexOf('phosphorus') === -1) return null;
+
+    /* Phosphated starches: real but bound, trace-level, and often unconfirmed.
+     * The group heading already says "possible", which is the whole claim. */
+    if (klass === 'phosphated-starch') return null;
+
     var b = el('span', 'badge ' + (organic ? 'low' : 'high'));
     b.textContent = organic
       ? 'Natural — about half absorbed'
@@ -335,6 +354,95 @@
     return b;
   }
 
+  /*
+   * How an additive finding is described to the person reading it.
+   *
+   * These groups are the whole point of the tier work in the scanner. A flat
+   * list ordered by load still puts potassium sorbate three rows below
+   * potassium chloride, and reads as "five potassium additives" when one of
+   * them is a bulk salt and four are preservatives at under 0.3% of the
+   * product. Splitting them says what a flat list cannot.
+   *
+   * Wording rules, which are not stylistic:
+   *   - describe what is on the label, never what to do about it. "Ask your
+   *     dietitian" is the furthest this goes; "avoid", "limit" and "too much"
+   *     are clinical advice and out of bounds (see the boundary note in
+   *     log.js).
+   *   - no milligram figures. Manufacturers need not disclose how much
+   *     additive they used and ingredient order gives rank, not amount.
+   *   - short sentences, plain words. Half the US dialysis population is over
+   *     65 and health literacy cannot be assumed.
+   */
+  var ADDITIVE_GROUPS = [
+    {
+      klass: 'inorganic-phosphate',
+      heading: 'Added phosphorus',
+      lead: 'Your body absorbs almost all of this kind of phosphorus. ' +
+            'It is not shown in the Nutrition Facts — we found it by reading the ingredients.'
+    },
+    {
+      klass: 'process-indicator',
+      heading: 'Added solution',
+      lead: 'This kind of label means a salt solution was added to the meat. ' +
+            'That solution usually contains phosphate, even when the label does not name it.'
+    },
+    {
+      klass: 'material-potassium',
+      heading: 'Added potassium',
+      lead: 'These are used in large enough amounts to add real potassium.'
+    },
+    {
+      klass: 'phosphated-starch',
+      heading: 'Possible added phosphorus',
+      lead: 'Some modified starches contain added phosphorus and some do not. ' +
+            'US labels do not say which, so we cannot be sure from the package.'
+    },
+    {
+      klass: 'organic-phosphorus',
+      heading: 'Phosphorus from ingredients',
+      lead: 'This phosphorus is part of the food itself, not an added salt. ' +
+            'Your body absorbs less of it.'
+    },
+    {
+      klass: 'trivial-potassium',
+      heading: 'Trace potassium',
+      lead: 'Preservatives and additives used in tiny amounts. ' +
+            'They contain potassium but add very little.'
+    }
+  ];
+
+  function additiveRow(a) {
+    var node = el('div', 'additive');
+
+    var name = el('div', 'name');
+    name.appendChild(el('span', null, a.name));
+    name.appendChild(mineralBadge(a.minerals));
+    name.appendChild(loadBadge(a.load));
+    var absA = absorptionBadge(a.organic, a.minerals, a.klass);
+    if (absA) name.appendChild(absA);
+    if (a.confidence === 'possible') {
+      var q = el('span', 'badge unknown');
+      q.textContent = '? Not certain';
+      name.appendChild(q);
+    }
+    node.appendChild(name);
+
+    var full = window.RenalAdditives.byId[a.id];
+    if (full) node.appendChild(el('div', 'note', full.note));
+
+    /*
+     * The E number, where there is one. It is the one identifier that
+     * survives translation and reformulation, so it is what someone can
+     * actually carry to a dietitian or match against another package.
+     */
+    if (full && full.eNumber) {
+      node.appendChild(el('div', 'src', full.eNumber));
+    }
+
+    node.appendChild(el('div', 'where', 'In: ' + a.foods.join(', ')));
+    return node;
+  }
+
   function renderAdditives(additives) {
     var card = $('additiveCard');
     var host = $('additiveList');
@@ -343,38 +451,41 @@
     if (!additives.length) { card.hidden = true; return; }
     card.hidden = false;
 
-    additives.forEach(function (a) {
-      var node = el('div', 'additive');
+    /*
+     * Entries logged before the dictionary carried a class have klass === null.
+     * They still have to render, so they fall into a final catch-all group
+     * rather than disappearing from someone's history.
+     */
+    var placed = Object.create(null);
+    ADDITIVE_GROUPS.forEach(function (g) {
+      var members = additives.filter(function (a) { return a.klass === g.klass; });
+      if (!members.length) return;
+      members.forEach(function (a) { placed[a.id] = true; });
 
-      var name = el('div', 'name');
-      name.appendChild(el('span', null, a.name));
-      name.appendChild(mineralBadge(a.minerals));
-      name.appendChild(loadBadge(a.load));
-      var absA = absorptionBadge(a.organic, a.minerals);
-      if (absA) name.appendChild(absA);
-      if (a.confidence === 'possible') {
-        var q = el('span', 'badge unknown');
-        q.textContent = '? Not certain';
-        name.appendChild(q);
-      }
-      node.appendChild(name);
-
-      var full = window.RenalAdditives.byId[a.id];
-      if (full) node.appendChild(el('div', 'note', full.note));
-
-      /*
-       * The E number, where there is one. It is the one identifier that
-       * survives translation and reformulation, so it is what someone can
-       * actually carry to a dietitian or match against another package.
-       */
-      if (full && full.eNumber) {
-        node.appendChild(el('div', 'src', full.eNumber));
-      }
-
-      node.appendChild(el('div', 'where', 'In: ' + a.foods.join(', ')));
-      host.appendChild(node);
+      var sec = el('div', 'additive-group');
+      sec.appendChild(el('h3', null, g.heading));
+      sec.appendChild(el('p', 'hint', g.lead));
+      members.forEach(function (a) { sec.appendChild(additiveRow(a)); });
+      host.appendChild(sec);
     });
+
+    var rest = additives.filter(function (a) { return !placed[a.id]; });
+    if (rest.length) {
+      var other = el('div', 'additive-group');
+      other.appendChild(el('h3', null, 'Other additives found'));
+      rest.forEach(function (a) { other.appendChild(additiveRow(a)); });
+      host.appendChild(other);
+    }
+
+    /*
+     * Standing disclaimer, inside the card rather than once at the bottom of
+     * the screen, because this card is the part of the app that most looks
+     * like it is telling someone something clinical.
+     */
+    host.appendChild(el('p', 'disclaimer',
+      'For information only, not medical advice. Bring this to your kidney care team.'));
   }
+
 
   function renderEntries(entries) {
     var host = $('entries');
@@ -1208,7 +1319,7 @@
         name.appendChild(el('span', null, f.name));
         name.appendChild(mineralBadge(f.minerals));
         name.appendChild(loadBadge(f.load));
-        var absF = absorptionBadge(f.organic, f.minerals);
+        var absF = absorptionBadge(f.organic, f.minerals, f.klass);
         if (absF) name.appendChild(absF);
         node.appendChild(name);
         node.appendChild(el('div', 'note', f.note));

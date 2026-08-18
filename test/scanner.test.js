@@ -12,6 +12,7 @@
 'use strict';
 
 var scanner = require('../js/scanner.js');
+var additives = require('../js/additives.js');
 
 var passed = 0;
 var failed = [];
@@ -322,6 +323,88 @@ test('summarize gives a plain-language, non-directive line', function () {
   assert(/phosphorus/.test(s) && /potassium/.test(s), 'summary should mention both: ' + s);
   // Must not tell the user what to do — that is regulated territory.
   assert(!/should|avoid|limit|don't|do not|too much/i.test(s), 'summary must not be directive: ' + s);
+});
+
+test('every additive class the dictionary emits has a UI group', function () {
+  /*
+   * renderAdditives() groups findings by class and gives each group a
+   * plain-language lead sentence. Anything with no group falls into a bare
+   * "Other additives found" bucket with no explanation — which is exactly
+   * where a NEW class would land, silently, months from now.
+   *
+   * Adding a class to additives.js without adding its group is therefore a
+   * quiet downgrade of the thing the tiers exist to communicate, and nothing
+   * else would catch it.
+   */
+  var fs = require('fs');
+  var path = require('path');
+  var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+
+  var m = src.match(/var ADDITIVE_GROUPS = \[[\s\S]*?\n  \];/);
+  assert(m, 'ADDITIVE_GROUPS not found in app.js');
+  var groups = eval('(' + m[0].replace('var ADDITIVE_GROUPS = ', '').replace(/;$/, '') + ')');
+  var covered = groups.map(function (g) { return g.klass; });
+
+  additives.all.forEach(function (a) {
+    /* Zero-mineral entries exist only to win the longest-match race and are
+     * filtered out before rendering, so they need no group. */
+    if (!a.minerals.length) return;
+    assert(covered.indexOf(a.klass) !== -1,
+      a.id + ' has class "' + a.klass + '" with no group in renderAdditives()');
+  });
+
+  /* And every group must be reachable, or it is dead wording. */
+  var emitted = additives.all.filter(function (a) { return a.minerals.length; })
+    .map(function (a) { return a.klass; });
+  groups.forEach(function (g) {
+    assert(emitted.indexOf(g.klass) !== -1,
+      'UI group "' + g.klass + '" can never have a member');
+  });
+
+  /* The lead sentences are patient-facing and must stay descriptive. */
+  groups.forEach(function (g) {
+    assert(!/\byou should\b|\bavoid\b|\blimit\b|\btoo much\b|\bunsafe\b|\bdo not eat\b/i.test(g.lead),
+      'group "' + g.klass + '" lead crosses into advice: ' + g.lead);
+    assert(!/\d+\s*mg/i.test(g.lead),
+      'group "' + g.klass + '" lead states a milligram figure: ' + g.lead);
+  });
+});
+
+test('the absorption badge never overstates a phosphated starch', function () {
+  /*
+   * "Added — almost fully absorbed" is the strongest claim this app makes.
+   * The badge used to be a boolean on `organic`, so anything not marked
+   * organic got it — including modified food starch, where the phosphorus is
+   * a cross-link at trace levels AND unconfirmed. That row carried the
+   * app's most confident sentence next to "? Not certain".
+   *
+   * Saying nothing there is honest. Saying that is not.
+   */
+  var fs = require('fs');
+  var path = require('path');
+  var src = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+
+  var m = src.match(/function absorptionBadge\(organic, minerals, klass\) \{[\s\S]*?\n  \}/);
+  assert(m, 'absorptionBadge(organic, minerals, klass) not found — did the signature change?');
+
+  var el = function (tag, cls, text) { return { textContent: text }; };
+  var badge = new Function('el', m[0] + '; return absorptionBadge;')(el);
+
+  assert(badge(false, ['phosphorus'], 'phosphated-starch') === null,
+    'a phosphated starch must not claim near-complete absorption');
+  assert(badge(false, ['phosphorus'], 'inorganic-phosphate').textContent === 'Added — almost fully absorbed',
+    'an added phosphate salt should say so');
+  assert(badge(true, ['phosphorus'], 'organic-phosphorus').textContent === 'Natural — about half absorbed',
+    'organic phosphorus should say so');
+  assert(badge(false, ['potassium'], 'material-potassium') === null,
+    'absorption is a phosphorus idea; potassium-only findings get no badge');
+
+  /* Every call site must pass the class, or the fix is inert where it matters. */
+  var calls = src.match(/absorptionBadge\([^)]*\)/g) || [];
+  calls.forEach(function (c) {
+    if (c.indexOf('function') !== -1) return;
+    assert(/klass/.test(c), 'call site drops the class: ' + c);
+  });
 });
 
 /* ------------------------------------------------------------------ *

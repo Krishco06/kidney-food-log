@@ -507,3 +507,23 @@ summary { cursor: pointer; font-weight: 600; min-height: 44px; padding: 10px 0; 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---------------------------------------------------------------- *
+ * Additive groups
+ *
+ * The tier split only helps if it is visible. Each group carries its own
+ * heading and one plain-language sentence, so "potassium chloride" and
+ * "potassium sorbate" never sit in the same list looking like the same
+ * kind of finding.
+ * ---------------------------------------------------------------- */
+
+.additive-group { margin-bottom: 20px; }
+.additive-group:last-of-type { margin-bottom: 8px; }
+.additive-group > h3 {
+  font-size: 1rem;
+  margin: 0 0 2px;
+  padding-top: 12px;
+  border-top: 2px solid var(--border);
+}
+.additive-group:first-child > h3 { padding-top: 0; border-top: 0; }
+.additive-group > .hint { margin: 0 0 6px; }
