@@ -424,6 +424,51 @@ test('the library is small enough to ship in an offline PWA', function () {
   assert(ms < 400, 'decoding ' + C.count + ' rows took ' + ms + ' ms');
 });
 
+test('every asset the app needs is precached for offline use', function () {
+  /*
+   * The app is built for dialysis-unit wifi: four hours in a chair, three days
+   * a week, on a connection that may not work. "The shell must load and the
+   * existing log must be readable with no network" is the promise in sw.js.
+   *
+   * Adding a <script> or <link> to index.html without adding it to SHELL
+   * breaks that promise silently — everything works in development and on any
+   * machine that has already cached the file, and fails only for someone
+   * offline, which is the person this was built for.
+   */
+  var fs = require('fs');
+  var path = require('path');
+  var root = path.join(__dirname, '..');
+
+  var html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  var sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  var shellBlock = (sw.match(/var SHELL = \[([\s\S]*?)\];/) || [])[1] || '';
+  assert(shellBlock, 'SHELL list not found in sw.js');
+
+  var refs = [];
+  var re = /(?:src|href)=["']([^"']+)["']/g;
+  var m;
+  while ((m = re.exec(html))) {
+    var u = m[1];
+    if (/^https?:|^data:|^#|^mailto:/.test(u)) continue;
+    refs.push(u);
+  }
+  assert(refs.length >= 5, 'expected several local assets, found ' + refs.length);
+
+  refs.forEach(function (u) {
+    assert(fs.existsSync(path.join(root, u)), 'index.html references a missing file: ' + u);
+    assert(shellBlock.indexOf("'" + u + "'") !== -1,
+      u + ' is loaded by index.html but not precached in sw.js');
+  });
+
+  /* The two files app.js injects at runtime are not in the HTML, so the loop
+   * above cannot see them — and they are the largest things the app loads. */
+  ['js/commonfoods.js', 'js/commonfoods-desc.js'].forEach(function (u) {
+    assert(shellBlock.indexOf("'" + u + "'") !== -1,
+      u + ' is injected at runtime but not precached; the Add screen would ' +
+      'fail offline');
+  });
+});
+
 test('descriptions are a separate file, off the search path', function () {
   /*
    * The whole point of the split. If commonfoods-desc.js ever gets a script
