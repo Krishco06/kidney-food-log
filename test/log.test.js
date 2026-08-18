@@ -260,6 +260,90 @@ test('CSV lists the additives found in each item', function () {
   assert(Log.toCSV([Log.dateKey()]).indexOf('STPP') !== -1);
 });
 
+test('CSV keeps additive tiers apart instead of lumping them by mineral', function () {
+  /*
+   * The export is the surface a dietitian actually acts on, so it is the worst
+   * place to lose the tier distinction — and it did, for a while. Two columns
+   * filled by mineral produced:
+   *
+   *   Sodium phosphate; Lecithin  |  Potassium chloride; Potassium sorbate
+   *
+   * which reads as two phosphate additives and two potassium additives of
+   * equal standing. Sodium phosphate is a bulk inorganic salt absorbed at
+   * ~100%; lecithin is organic, trace, and per Picard 2023 not associated with
+   * higher product phosphorus. Potassium chloride is 52.5% potassium used in
+   * bulk; potassium sorbate is a preservative under 0.3% of the product.
+   */
+  var scan = {
+    scanned: true,
+    findings: [
+      { id: 'sodium-phosphate', name: 'Sodium phosphate', minerals: ['phosphorus'],
+        klass: 'inorganic-phosphate', load: 'high', confidence: 'definite' },
+      { id: 'modified-starch', name: 'Modified food starch', minerals: ['phosphorus'],
+        klass: 'phosphated-starch', load: 'low', confidence: 'possible' },
+      { id: 'lecithin', name: 'Lecithin', minerals: ['phosphorus'],
+        klass: 'organic-phosphorus', load: 'low', confidence: 'definite', organic: true },
+      { id: 'potassium-chloride', name: 'Potassium chloride', minerals: ['potassium'],
+        klass: 'material-potassium', load: 'high', confidence: 'definite' },
+      { id: 'potassium-sorbate', name: 'Potassium sorbate', minerals: ['potassium'],
+        klass: 'trivial-potassium', load: 'low', confidence: 'definite' }
+    ]
+  };
+  Log.addFood(food('Tiered turkey', { phosphorus: 100 }, scan), 100, '2 slices');
+
+  var lines = Log.toCSV([Log.dateKey()]).split('\n');
+  var head = lines[0].split(',');
+  var row = lines.filter(function (l) { return l.indexOf('Tiered turkey') !== -1; })[0];
+  assert(row, 'exported row not found');
+
+  function cell(colName) {
+    var i = head.indexOf(colName);
+    assert(i !== -1, 'no column named ' + colName + ' in: ' + head.join('|'));
+    /* Naive split is fine — none of these cells contain a comma. */
+    return row.split(',')[i];
+  }
+
+  assert(cell('Added phosphate (absorbed ~100%)').indexOf('Sodium phosphate') !== -1,
+    'the inorganic salt belongs in the added-phosphate column');
+  assert(cell('Added phosphate (absorbed ~100%)').indexOf('Lecithin') === -1,
+    'lecithin must NOT sit beside an added phosphate salt');
+  assert(cell('Phosphorus from ingredients').indexOf('Lecithin') !== -1,
+    'lecithin belongs in the organic column');
+  /*
+   * Both directions. Asserting only "the right thing is here" passes happily
+   * when a column ALSO collects things that do not belong — which is exactly
+   * how the columns got mixed in the first place.
+   */
+  assert(cell('Phosphorus from ingredients').indexOf('Sodium phosphate') === -1,
+    'an added phosphate salt must not also appear as organic phosphorus');
+  assert(cell('Trace potassium').indexOf('Potassium chloride') === -1,
+    'a bulk potassium salt must not also appear as trace');
+  assert(cell('Possible added phosphate').indexOf('Sodium phosphate') === -1,
+    'a confirmed salt must not also appear as merely possible');
+  assert(cell('Possible added phosphate').indexOf('Modified food starch') !== -1,
+    'an unconfirmed starch belongs in its own column');
+  assert(cell('Added potassium').indexOf('Potassium chloride') !== -1);
+  assert(cell('Added potassium').indexOf('Potassium sorbate') === -1,
+    'a trace preservative must never read as added potassium');
+  assert(cell('Trace potassium').indexOf('Potassium sorbate') !== -1);
+});
+
+test('CSV still exports pre-tier entries rather than dropping them', function () {
+  /*
+   * Entries logged before the dictionary carried a class have klass
+   * undefined. They must still export — less specifically, but truthfully —
+   * because they are already in someone's history.
+   */
+  Log.addFood(food('Old entry', { phosphorus: 50 }, {
+    scanned: true,
+    findings: [{ id: 'x', name: 'Legacy phosphate', minerals: ['phosphorus'],
+                 load: 'high', confidence: 'definite' }]
+  }), 100, '1');
+  var csv = Log.toCSV([Log.dateKey()]);
+  assert(csv.indexOf('Legacy phosphate') !== -1,
+    'a finding with no class must still appear somewhere in the export');
+});
+
 /* ------------------------------------------------------------------ *
  * Regulatory boundary — these must NOT exist in v1
  * ------------------------------------------------------------------ */

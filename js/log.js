@@ -288,11 +288,35 @@
    * missing value for a zero.
    */
   function toCSV(dateKeys) {
+    /*
+     * ADDITIVES ARE SPLIT BY TIER, NOT BY MINERAL.
+     *
+     * This used to be two columns, "Phosphate additives" and "Potassium
+     * additives", filled by mineral. A deli turkey exported as
+     *
+     *   Sodium phosphate; Lecithin  |  Potassium chloride; Potassium sorbate
+     *
+     * which reads to a dietitian as two phosphate additives and two potassium
+     * additives of equal standing. They are not: sodium phosphate is a bulk
+     * inorganic salt absorbed at ~100%, lecithin is organic and trace (and per
+     * Picard 2023 not associated with higher product phosphorus at all);
+     * potassium chloride is 52.5% potassium used in bulk, potassium sorbate is
+     * a preservative at under 0.3% of the product.
+     *
+     * The app tiers these correctly on screen. Flattening them here undid that
+     * on the one surface a clinician actually acts on, which is the worst place
+     * to lose it.
+     */
     var rows = [[
       'Date', 'Time', 'Item', 'Brand', 'Portion',
       'Energy (cal)', 'Protein (g)', 'Sodium (mg)',
       'Potassium (mg)', 'Phosphorus (mg)', 'Fluid (mL)',
-      'Phosphate additives', 'Potassium additives', 'Source'
+      'Added phosphate (absorbed ~100%)',
+      'Possible added phosphate',
+      'Phosphorus from ingredients',
+      'Added potassium',
+      'Trace potassium',
+      'Source'
     ]];
 
     dateKeys.forEach(function (key) {
@@ -302,9 +326,19 @@
           return (v === null || v === undefined || isNaN(v))
             ? '?' : String(Math.round(v * Math.pow(10, dp || 0)) / Math.pow(10, dp || 0));
         };
-        var byMineral = function (m) {
+        /*
+         * Entries logged before the dictionary carried a class have klass
+         * null. Rather than drop them, fall back to the mineral so an older
+         * log still exports something truthful — just less specific.
+         */
+        var byClass = function (classes, fallbackMineral) {
           return ((e.scan && e.scan.findings) || [])
-            .filter(function (f) { return f.minerals.indexOf(m) !== -1; })
+            .filter(function (f) {
+              if (f.klass) return classes.indexOf(f.klass) !== -1;
+              return fallbackMineral
+                ? f.minerals.indexOf(fallbackMineral) !== -1
+                : false;
+            })
             .map(function (f) { return f.name; }).join('; ');
         };
         rows.push([
@@ -314,7 +348,11 @@
           cell(n.energy), cell(n.protein, 1), cell(n.sodium),
           cell(n.potassium), cell(n.phosphorus),
           e.type === 'fluid' ? Math.round(e.ml) : '',
-          byMineral('phosphorus'), byMineral('potassium'),
+          byClass(['inorganic-phosphate', 'process-indicator'], 'phosphorus'),
+          byClass(['phosphated-starch']),
+          byClass(['organic-phosphorus']),
+          byClass(['material-potassium'], 'potassium'),
+          byClass(['trivial-potassium']),
           e.source || ''
         ]);
       });
