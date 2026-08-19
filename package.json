@@ -4,14 +4,15 @@
   "private": true,
   "description": "A food log for people on dialysis that shows what the data does not know, instead of counting missing phosphorus as zero.",
   "scripts": {
-    "test": "node test/scanner.test.js && node test/log.test.js && node test/barcode.test.js && node test/commonfoods.test.js && node test/contrast.test.js && node worker/test/worker.test.js",
+    "test": "node test/scanner.test.js && node test/log.test.js && node test/barcode.test.js && node test/commonfoods.test.js && node test/contrast.test.js && node test/source.test.js && node worker/test/worker.test.js",
     "test:scanner": "node test/scanner.test.js",
     "test:log": "node test/log.test.js",
     "test:barcode": "node test/barcode.test.js",
     "test:worker": "node worker/test/worker.test.js",
     "deploy:worker": "wrangler deploy --cwd worker",
     "test:common": "node test/commonfoods.test.js",
-    "test:contrast": "node test/contrast.test.js"
+    "test:contrast": "node test/contrast.test.js",
+    "test:source": "node test/source.test.js"
   },
   "license": "MIT"
 }
