@@ -1358,7 +1358,13 @@
       card.appendChild(el('div', 'meta',
         entries.length + (entries.length === 1 ? ' item' : ' items')));
 
-      ['phosphorus', 'potassium'].forEach(function (k) {
+      /*
+       * Sodium is here and not only on Today because it is the lever between the
+       * two halves of the problem: sodium drives thirst, thirst drives fluid,
+       * and fluid drives interdialytic weight gain. Reviewing a week of
+       * phosphorus without it hides why the fluid numbers move.
+       */
+      ['phosphorus', 'potassium', 'sodium'].forEach(function (k) {
         var stat = t.totals[k];
         var line = el('div', 'coverage-note' + (stat.complete ? '' : ' warn'));
         line.textContent = NUTRIENT_LABELS[k] + ': ' +
@@ -1368,6 +1374,16 @@
                           ' missing data)' : '');
         card.appendChild(line);
       });
+
+      /*
+       * Fluid was missing from this screen entirely, which is the odd omission:
+       * volume between dialysis days is the number this population is asked
+       * about most, totals() already computes it, and looking back across days
+       * is exactly what it is for. "logged" carries the caveat inline — this is
+       * what the user entered, not everything they drank.
+       */
+      card.appendChild(el('div', 'coverage-note',
+        'Fluid logged: ' + Units.formatFluid(t.fluidMl, state.fluidUnit)));
 
       host.appendChild(card);
     });

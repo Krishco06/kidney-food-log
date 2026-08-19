@@ -48,12 +48,23 @@
     return d.getFullYear() + '-' + m + '-' + day;
   }
 
-  function prettyDate(key) {
+  /*
+   * The year appears only when it is not the current one. On the Today header
+   * that means it never appears, which is what you want. In History it matters:
+   * this is a log someone keeps for years, and without it a card from
+   * 2025-08-19 and one from 2026-08-19 both read "Tuesday, August 19".
+   *
+   * @param {string} key    ISO yyyy-mm-dd
+   * @param {number} [nowY] reference year; defaults to the current one. Only
+   *                        here so the behaviour is testable without clock games.
+   */
+  function prettyDate(key, nowY) {
     var parts = String(key).split('-');
     var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
-    return d.toLocaleDateString(undefined, {
-      weekday: 'long', month: 'long', day: 'numeric'
-    });
+    var opts = { weekday: 'long', month: 'long', day: 'numeric' };
+    var ref = (nowY === undefined || nowY === null) ? new Date().getFullYear() : nowY;
+    if (d.getFullYear() !== ref) opts.year = 'numeric';
+    return d.toLocaleDateString(undefined, opts);
   }
 
   /* ------------------------------------------------------------------ *
@@ -146,6 +157,48 @@
     return entries;
   }
 
+  /*
+   * Per-100-mL nutrient profiles for the one-tap drink chips.
+   *
+   * Only water gets one, and only for the minerals that genuinely are nil.
+   * SR Legacy measures potassium and phosphorus in tap, bottled, municipal and
+   * well water at 0-1 mg/100 g, and no drinking-water treatment adds a material
+   * amount of either: utilities that dose orthophosphate for lead-pipe control
+   * add well under 1 mg of phosphorus per litre.
+   *
+   * This exists because the alternative was worse than a missing number. With
+   * water recorded as fully unknown, six glasses of it turned a day's phosphorus
+   * into "at least 20 mg, from 1 of 7 items", and the "which items have no
+   * phosphorus data?" list answered "Water". The user knows water has no
+   * phosphorus in it. A coverage counter that cries wolf there is one the user
+   * stops reading on the frozen dinner, which is the entry that matters.
+   *
+   * Sodium stays UNKNOWN even for water, and that is deliberate, not an
+   * oversight: municipal sodium varies by source, and an ion-exchange softener
+   * — common on well water — trades calcium for sodium and can add over
+   * 100 mg/L. We do not know which tap this came from.
+   *
+   * Nothing else gets a profile. "Juice" could be 500 mg of potassium, "Milk" is
+   * around 230 mg of phosphorus a cup, "Soda" could be a dark cola carrying
+   * phosphoric acid, and "Coffee" might be black or might have powdered creamer
+   * in it at 288 mg P/100 g. For those, volume is all the user told us, and
+   * inventing a number would be exactly the false precision this app rejects.
+   */
+  var FLUID_PROFILES = {
+    Water: { energy: 0, protein: 0, sodium: null, potassium: 0, phosphorus: 0 }
+  };
+
+  /* Scale a drink profile to the volume poured. Unknowns stay unknown. */
+  function fluidNutrients(drink, ml) {
+    var p = FLUID_PROFILES[drink];
+    if (!p) return Foods.emptyNutrients();
+    var out = {};
+    NUTRIENTS.forEach(function (n) {
+      out[n] = (p[n] === null || p[n] === undefined) ? null : p[n] * (ml / 100);
+    });
+    return out;
+  }
+
   /**
    * Add a drink. Fluid is tracked separately from food because interdialytic
    * weight gain is driven by volume, and soups, gelatin and ice all count.
@@ -160,7 +213,7 @@
       name: name,
       ml: ml,
       portionLabel: Math.round(ml) + ' mL',
-      nutrients: nutrients || Foods.emptyNutrients(),
+      nutrients: nutrients || fluidNutrients(name, ml),
       scan: { scanned: false, findings: [] }
     });
     write(key, entries);
@@ -370,6 +423,7 @@
     NUTRIENTS: NUTRIENTS,
     dateKey: dateKey,
     prettyDate: prettyDate,
+    fluidNutrients: fluidNutrients,
     read: read,
     write: write,
     allDates: allDates,

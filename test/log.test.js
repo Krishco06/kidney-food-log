@@ -119,6 +119,34 @@ test('coverage note is clean when everything is known', function () {
 });
 
 /* ------------------------------------------------------------------ *
+ * Date labels
+ * ------------------------------------------------------------------ */
+
+/* History is a log someone keeps for years. Without the year, a card from
+ * 2025-08-19 and one from 2026-08-19 both read "Tuesday, August 19". */
+test('a date in another year is labelled with its year', function () {
+  var s = Log.prettyDate('2025-08-19', 2026);
+  assert(/2025/.test(s), 'expected the year in "' + s + '"');
+});
+
+test('a date in the current year is not cluttered with the year', function () {
+  var s = Log.prettyDate('2026-08-19', 2026);
+  assert(!/2026/.test(s), 'the Today header should not carry the year: "' + s + '"');
+});
+
+test('two same-day dates in different years render differently', function () {
+  assert(Log.prettyDate('2025-08-19', 2026) !== Log.prettyDate('2026-08-19', 2026),
+    'August 19 of two different years must not render identically');
+});
+
+test('the date label round-trips the day it was given', function () {
+  /* Guards the off-by-one that month-indexing invites. */
+  assert(/\b1\b/.test(Log.prettyDate('2026-01-01', 2026)), 'Jan 1 lost its day');
+  assert(/January/.test(Log.prettyDate('2026-01-01', 2026)), 'Jan 1 lost its month');
+  assert(/February 29/.test(Log.prettyDate('2024-02-29', 2024)), 'leap day mangled');
+});
+
+/* ------------------------------------------------------------------ *
  * Entries, fluid, additive rollup
  * ------------------------------------------------------------------ */
 
@@ -128,6 +156,62 @@ test('fluid is totalled separately from food', function () {
   var t = Log.totals(Log.read(Log.dateKey()));
   close(t.fluidMl, 740, 0.01);
   assert(t.entryCount === 2);
+});
+
+/*
+ * Water was the loudest false alarm in the app. Six glasses of it — an entirely
+ * ordinary dialysis day — turned the day's phosphorus into "at least 20 mg,
+ * from 1 of 7 items", and the "which items have no phosphorus data?" list
+ * answered "Water". A coverage counter that cries wolf on water trains the user
+ * to ignore it on the frozen dinner, which is the one that actually matters.
+ */
+test('water does not count as missing potassium or phosphorus data', function () {
+  Log.addFluid('Water', 237);
+  var t = Log.totals(Log.read(Log.dateKey()));
+  ['potassium', 'phosphorus'].forEach(function (n) {
+    assert(t.totals[n].unknown === 0,
+      'water should not be missing ' + n + ' data, got unknown=' + t.totals[n].unknown);
+    assert(t.totals[n].complete, n + ' should read as complete with only water logged');
+    assert(t.totals[n].unknownNames.indexOf('Water') === -1,
+      'water must not appear in the "no ' + n + ' data" list');
+  });
+});
+
+/* The other half of the same fix: water's sodium really is unknown. Municipal
+ * sodium varies by source, and an ion-exchange softener trades calcium for
+ * sodium and can add 100+ mg/L. Zeroing it would be the opposite error. */
+test('water still counts as missing sodium data', function () {
+  Log.addFluid('Water', 237);
+  var t = Log.totals(Log.read(Log.dateKey()));
+  assert(t.totals.sodium.unknown === 1,
+    'water sodium should stay unknown, got unknown=' + t.totals.sodium.unknown);
+  assert(!t.totals.sodium.complete, 'sodium should not read as complete');
+});
+
+/* Everything that is not water stays fully unknown, and that is the point:
+ * "Juice" could be 500 mg of potassium, "Milk" is ~230 mg of phosphorus a cup,
+ * "Soda" could be a dark cola carrying phosphoric acid. Volume is all we know. */
+test('drinks other than water stay unknown on every nutrient', function () {
+  ['Coffee', 'Tea', 'Juice', 'Soda', 'Milk', 'Soup', 'Other'].forEach(function (d) {
+    store = Object.create(null);
+    Log.addFluid(d, 237);
+    var t = Log.totals(Log.read(Log.dateKey()));
+    Log.NUTRIENTS.forEach(function (n) {
+      assert(t.totals[n].unknown === 1,
+        d + ' should be unknown for ' + n + ', got unknown=' + t.totals[n].unknown);
+    });
+  });
+});
+
+/* The volume-only fluid entries must not silently become a nutrient source
+ * either — a real food logged alongside water is still the only contributor. */
+test('water contributes no phosphorus to the sum it is counted in', function () {
+  Log.addFood(food('Apple', { phosphorus: 11, potassium: 107 }), 100, '1 medium');
+  Log.addFluid('Water', 237);
+  var t = Log.totals(Log.read(Log.dateKey()));
+  close(t.totals.phosphorus.sum, 11, 0.01, 'water added phosphorus to the total');
+  assert(t.totals.phosphorus.known === 2, 'both entries should count as known');
+  assert(t.totals.phosphorus.complete, 'the day should read as complete');
 });
 
 test('entries snapshot their values, so a later data change cannot rewrite history', function () {
